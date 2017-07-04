@@ -1,11 +1,11 @@
-package zenrpc
+package zenrpc_test
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"github.com/sergeyfast/zenrpc"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -13,11 +13,11 @@ import (
 	"testing"
 )
 
-type ArithService struct{ Service }
+type ArithService struct{ zenrpc.Service }
 
 // Invoke is as generated code from zenrpc cmd
-func (as ArithService) Invoke(ctx context.Context, method string, params json.RawMessage) Response {
-	resp := Response{}
+func (as ArithService) Invoke(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
+	resp := zenrpc.Response{}
 
 	switch method {
 	case "divide":
@@ -27,7 +27,7 @@ func (as ArithService) Invoke(ctx context.Context, method string, params json.Ra
 		}{}
 
 		if err := json.Unmarshal(params, &args); err != nil {
-			return NewResponseError(nil, InvalidParams, err.Error(), nil)
+			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 		}
 
 		// todo set default values
@@ -39,7 +39,7 @@ func (as ArithService) Invoke(ctx context.Context, method string, params json.Ra
 		}{}
 
 		if err := json.Unmarshal(params, &args); err != nil {
-			return NewResponseError(nil, InvalidParams, err.Error(), nil)
+			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 		}
 
 		resp.Set(as.Sum(ctx, args.A, args.B))
@@ -50,20 +50,20 @@ func (as ArithService) Invoke(ctx context.Context, method string, params json.Ra
 		}{}
 
 		if err := json.Unmarshal(params, &args); err != nil {
-			return NewResponseError(nil, InvalidParams, err.Error(), nil)
+			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 		}
 
 		resp.Set(as.Multiply(args.A, args.B))
 	default:
-		resp = NewResponseError(nil, MethodNotFound, "", nil)
+		resp = zenrpc.NewResponseError(nil, zenrpc.MethodNotFound, "", nil)
 	}
 
 	return resp
 }
 
 // Sum sums two digits and returns error with error code as result and IP from context.
-func (as *ArithService) Sum(ctx context.Context, a, b int) (bool, *Error) {
-	return true, NewStringError(a+b, ctx.Value("IP").(string))
+func (as *ArithService) Sum(ctx context.Context, a, b int) (bool, *zenrpc.Error) {
+	return true, zenrpc.NewStringError(a+b, ctx.Value("IP").(string))
 }
 
 // Multiply multiples two digits and returns result.
@@ -79,7 +79,7 @@ func (as *ArithService) Divide(a, b int) (quo *Quotient, err error) {
 	if b == 0 {
 		return nil, errors.New("divide by zero")
 	} else if b == 1 {
-		return nil, NewError(401, errors.New("we do not serve 1"))
+		return nil, zenrpc.NewError(401, errors.New("we do not serve 1"))
 	}
 
 	return &Quotient{
@@ -88,25 +88,95 @@ func (as *ArithService) Divide(a, b int) (quo *Quotient, err error) {
 	}, nil
 }
 
-func TestServer_ServeHTTP(t *testing.T) {
-	s := NewServer()
-	s.Register("arith", &ArithService{})
-	s.Register("", &ArithService{})
+var rpc = zenrpc.NewServer()
 
-	ts := httptest.NewServer(http.HandlerFunc(s.ServeHTTP))
+func init() {
+	rpc.Register("arith", &ArithService{})
+	rpc.Register("", &ArithService{})
+}
+
+func TestServer_ServeHTTP(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(rpc.ServeHTTP))
 	defer ts.Close()
 
-	v := bytes.NewBuffer([]byte(`{"jsonrpc": "2.0", "method": "arith.divide", "params": { "a": 1, "b": 24 }, "id": 1 }`))
-	res, err := http.Post(ts.URL, "application/json", v)
-	if err != nil {
-		log.Fatal(err)
+	var tc = []struct {
+		in, out string
+	}{
+		{
+			in:  `{"jsonrpc": "2.0", "method": "arith.divide", "params": { "a": 1, "b": 24 }, "id": 1 }`,
+			out: `{"jsonrpc":"2.0","id":1,"result":{"Quo":0,"Rem":1}}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "arith.divide", "params": { "a": 1, "b": 0 }, "id": 1 }`,
+			out: `{"jsonrpc":"2.0","id":1,"error":{"code":-32603,"message":"divide by zero"}}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "Arith.Divide", "params": { "a": 1, "b": 1 }, "id": "1" }`,
+			out: `{"jsonrpc":"2.0","id":"1","error":{"code":401,"message":"we do not serve 1"}}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "arith.multiply", "params": { "a": 3, "b": 2 }, "id": 0 }`,
+			out: `{"jsonrpc":"2.0","id":0,"result":6}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "multiply", "params": { "a": 4, "b": 2 }, "id": 0 }`,
+			out: `{"jsonrpc":"2.0","id":0,"result":8}`},
 	}
 
-	greeting, err := ioutil.ReadAll(res.Body)
-	res.Body.Close()
-	if err != nil {
-		log.Fatal(err)
+	for _, c := range tc {
+		res, err := http.Post(ts.URL, "application/json", bytes.NewBufferString(c.in))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		resp, err := ioutil.ReadAll(res.Body)
+		res.Body.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if string(resp) != c.out {
+			t.Errorf("Input: %s\n got %s expected %s", c.in, resp, c.out)
+		}
+	}
+}
+
+func TestServer_ServeHTTPWithErrors(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(rpc.ServeHTTP))
+	defer ts.Close()
+
+	var tc = []struct {
+		in, out string
+	}{
+		{
+			in:  `{"jsonrpc": "2.0", "method": "multiple1" }`,
+			out: `{"jsonrpc":"2.0","id":null,"error":{"code":-32601,"message":"Method not found"}}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "test.multiple1", "id": 1 }`,
+			out: `{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Method not found"}}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "foobar, "params": "bar", "baz]`,
+			out: `{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"Parse error"}}`},
+		{
+			in:  `{"jsonrpc": "2.0", "params": { "a": 1, "b": 0 }, "id": 1 }`,
+			out: `{"jsonrpc":"2.0","id":1,"error":{"code":-32600,"message":"Invalid Request"}}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": 1, "params": "bar"}`,
+			out: `{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"Parse error"}}`,
+			// in spec: {"jsonrpc": "2.0", "error": {"code": -32600, "message": "Invalid Request"}, "id": null}
+		},
 	}
 
-	fmt.Printf("%s", greeting)
+	for _, c := range tc {
+		res, err := http.Post(ts.URL, "application/json", bytes.NewBufferString(c.in))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		resp, err := ioutil.ReadAll(res.Body)
+		res.Body.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if string(resp) != c.out {
+			t.Errorf("Input: %s\n got %s expected %s", c.in, resp, c.out)
+		}
+	}
 }
