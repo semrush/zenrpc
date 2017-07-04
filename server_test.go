@@ -2,6 +2,7 @@ package zenrpc
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,37 +13,61 @@ import (
 	"testing"
 )
 
-type ArithService struct {
-}
+type ArithService struct{ Service }
 
-func (a *ArithService) Execute(method string, params json.RawMessage) Response {
+// Invoke is as generated code from zenrpc cmd
+func (as ArithService) Invoke(ctx context.Context, method string, params json.RawMessage) Response {
+	resp := Response{}
+
 	switch method {
 	case "divide":
 		var args = struct {
-			A int `json:"b"`
-			B int `json:"a"`
+			A int `json:"a"`
+			B int `json:"b"`
 		}{}
 
 		if err := json.Unmarshal(params, &args); err != nil {
-			return Response{Error: &Error{Code: 401, Err: errors.New("divide by zero")}}
+			return NewResponseError(nil, InvalidParams, err.Error(), nil)
 		}
 
-		// set default values
-		// possible err with custom marshaller
+		// todo set default values
+		resp.Set(as.Divide(args.A, args.B))
+	case "sum":
+		var args = struct {
+			A int `json:"a"`
+			B int `json:"b"`
+		}{}
 
-		if v, err := a.Divide(args.A, args.B); err != nil {
-			return Response{Error: &Error{Err: err}} // TODO handle Error
-		} else if r, err := json.Marshal(v); err != nil {
-			return Response{Error: &Error{Err: err}}
-		} else {
-			return Response{Result: r}
+		if err := json.Unmarshal(params, &args); err != nil {
+			return NewResponseError(nil, InvalidParams, err.Error(), nil)
 		}
+
+		resp.Set(as.Sum(ctx, args.A, args.B))
+	case "multiply":
+		var args = struct {
+			A int `json:"a"`
+			B int `json:"b"`
+		}{}
+
+		if err := json.Unmarshal(params, &args); err != nil {
+			return NewResponseError(nil, InvalidParams, err.Error(), nil)
+		}
+
+		resp.Set(as.Multiply(args.A, args.B))
+	default:
+		resp = NewResponseError(nil, MethodNotFound, "", nil)
 	}
 
-	return Response{} // TODO
+	return resp
 }
 
-func (t *ArithService) Multiply(a, b int) int {
+// Sum sums two digits and returns error with error code as result and IP from context.
+func (as *ArithService) Sum(ctx context.Context, a, b int) (bool, *Error) {
+	return true, NewStringError(a+b, ctx.Value("IP").(string))
+}
+
+// Multiply multiples two digits and returns result.
+func (as *ArithService) Multiply(a, b int) int {
 	return a * b
 }
 
@@ -50,11 +75,11 @@ type Quotient struct {
 	Quo, Rem int
 }
 
-func (t *ArithService) Divide(a, b int) (quo *Quotient, err error) {
+func (as *ArithService) Divide(a, b int) (quo *Quotient, err error) {
 	if b == 0 {
 		return nil, errors.New("divide by zero")
 	} else if b == 1 {
-		return nil, &Error{Code: 401, Err: errors.New("we do not serve 1")}
+		return nil, NewError(401, errors.New("we do not serve 1"))
 	}
 
 	return &Quotient{
@@ -66,11 +91,12 @@ func (t *ArithService) Divide(a, b int) (quo *Quotient, err error) {
 func TestServer_ServeHTTP(t *testing.T) {
 	s := NewServer()
 	s.Register("arith", &ArithService{})
+	s.Register("", &ArithService{})
 
 	ts := httptest.NewServer(http.HandlerFunc(s.ServeHTTP))
 	defer ts.Close()
 
-	v := bytes.NewBuffer([]byte(`{"jsonrpc": "2.0", "method": "arith.divide", "params": { "a": 42, "b": 23 }, "id": 1}`))
+	v := bytes.NewBuffer([]byte(`{"jsonrpc": "2.0", "method": "arith.divide", "params": { "a": 1, "b": 24 }, "id": 1 }`))
 	res, err := http.Post(ts.URL, "application/json", v)
 	if err != nil {
 		log.Fatal(err)
