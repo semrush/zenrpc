@@ -8,6 +8,7 @@ import (
 	"github.com/sergeyfast/zenrpc"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -54,6 +55,23 @@ func (as ArithService) Invoke(ctx context.Context, method string, params json.Ra
 		}
 
 		resp.Set(as.Multiply(args.A, args.B))
+	case "pow":
+		var args = struct {
+			Base float64  `json:"base"`
+			Exp  *float64 `json:"exp"`
+		}{}
+
+		if err := json.Unmarshal(params, &args); err != nil {
+			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		}
+
+		//zenrpc:exp:2
+		if args.Exp == nil {
+			var f float64 = 2
+			args.Exp = &f
+		}
+
+		resp.Set(as.Pow(args.Base, args.Exp))
 	default:
 		resp = zenrpc.NewResponseError(nil, zenrpc.MethodNotFound, "", nil)
 	}
@@ -75,6 +93,10 @@ type Quotient struct {
 	Quo, Rem int
 }
 
+// Divide divides two numbers.
+// Possible error codes are:
+// zenrpc:401 		we do not serve 1
+// zenrpc:-32603	divide by zero
 func (as *ArithService) Divide(a, b int) (quo *Quotient, err error) {
 	if b == 0 {
 		return nil, errors.New("divide by zero")
@@ -86,6 +108,12 @@ func (as *ArithService) Divide(a, b int) (quo *Quotient, err error) {
 		Quo: a / b,
 		Rem: a % b,
 	}, nil
+}
+
+// Pow returns x**y, the base-x exponential of y. If Exp is not set then default value is 2.
+//zenrpc:exp:2
+func (as *ArithService) Pow(base float64, exp *float64) float64 {
+	return math.Pow(base, *exp)
 }
 
 var rpc = zenrpc.NewServer()
@@ -117,6 +145,12 @@ func TestServer_ServeHTTP(t *testing.T) {
 		{
 			in:  `{"jsonrpc": "2.0", "method": "multiply", "params": { "a": 4, "b": 2 }, "id": 0 }`,
 			out: `{"jsonrpc":"2.0","id":0,"result":8}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "arith.pow", "params": { "base": 3, "exp": 3 }, "id": 0 }`,
+			out: `{"jsonrpc":"2.0","id":0,"result":27}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "arith.pow", "params": { "base": 3 }, "id": 0 }`,
+			out: `{"jsonrpc":"2.0","id":0,"result":9}`},
 	}
 
 	for _, c := range tc {

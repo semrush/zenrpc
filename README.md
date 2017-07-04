@@ -16,10 +16,14 @@ TODO
     * [ ] Batch requests
     * [ ] Notifications
   * [ ] Parameters
-    * [x] Position
-    * [ ] Named
+    * [x] Named
+    * [ ] Position
     * [ ] Default values
   * [ ] SMD Schema
+    * [ ] Input
+    * [ ] Output
+    * [ ] Codes
+    * [ ] Scopes for OAuth
 
 # Server Library Features
 
