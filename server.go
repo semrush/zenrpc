@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync"
+	"unicode"
 )
 
 // Invoker implements service handler.
@@ -34,15 +36,82 @@ func (s *Server) Register(namespace string, service Invoker) {
 }
 
 // process process JSON-RPC 2.0 message, invokes correct method for namespace and returns JSON-RPC 2.0 Response.
-func (s *Server) process(ctx context.Context, message json.RawMessage) Response {
-	req := &Request{}
+func (s *Server) process(ctx context.Context, message json.RawMessage) interface{} {
 
-	// unmarshal request
-	// TODO process batch
-	if err := json.Unmarshal(message, req); err != nil {
+	requests := []Request{}
+
+	// parsing batch requests
+	batch := false
+	for _, b := range message {
+		if unicode.IsSpace(rune(b)) {
+			continue
+		}
+
+		if b == '[' {
+			batch = true
+		}
+		break
+	}
+
+	// making not batch request looks like batch to simplify further code
+	if !batch {
+		message = append(append([]byte{'['}, message...), ']')
+	}
+
+	// unmarshal request(s)
+	if err := json.Unmarshal(message, &requests); err != nil {
 		return NewResponseError(nil, ParseError, "", nil)
 	}
 
+	// if there no requests to process
+	if len(requests) == 0 {
+		return NewResponseError(nil, InvalidRequest, "", nil)
+	}
+
+	// running request asynchronously
+	reqLen := len(requests)
+	respChan := make(chan Response, reqLen)
+	var wg sync.WaitGroup
+	wg.Add(reqLen)
+
+	for _, req := range requests {
+		// running request in gorutine
+		go func() {
+			if req.Id == nil {
+				wg.Done()
+				s.processRequest(ctx, &req)
+			} else {
+				r := s.processRequest(ctx, &req)
+				r.Id = req.Id
+				respChan <- r
+				wg.Done()
+			}
+		}()
+	}
+
+	// TODO what if one of requests freezes?
+	// waiting to complete
+	wg.Wait()
+	close(respChan)
+
+	// collecting responses
+	responses := make([]Response, 0, reqLen)
+	for r := range respChan {
+		responses = append(responses, r)
+	}
+
+	// sending single response or array of responses if batch
+	if batch {
+		return responses
+	} else if len(responses) == 0 {
+		// no responses -> all requests are notifications
+		return nil
+	} else {
+		return responses[0]
+	}
+}
+
+func (s Server) processRequest(ctx context.Context, req *Request) Response {
 	// checks for json-rpc version and method
 	if req.Version != Version || req.Method == "" {
 		return NewResponseError(req.Id, InvalidRequest, "", nil)
@@ -60,8 +129,6 @@ func (s *Server) process(ctx context.Context, message json.RawMessage) Response 
 		return NewResponseError(req.Id, MethodNotFound, "", nil)
 	}
 
-	// TODO Notifications
-
 	resp := s.services[namespace].Invoke(ctx, method, req.Params)
 	resp.Id = req.Id
 
@@ -71,7 +138,7 @@ func (s *Server) process(ctx context.Context, message json.RawMessage) Response 
 // ServeHTTP process JSON-RPC 2.0 requests via HTTP.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	b, err := ioutil.ReadAll(r.Body)
-	var data Response
+	var data interface{}
 
 	ctx := context.WithValue(context.Background(), "IP", r.RemoteAddr)
 
@@ -81,7 +148,17 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		data = s.process(ctx, b)
 	}
 
-	if _, err := w.Write(data.JSON()); err != nil {
+	// if responses is empty -> all requests are notifications -> exit immediately
+	if data == nil {
+		return
+	}
+
+	mes, err := json.Marshal(data)
+	if err != nil {
+		return
+	}
+
+	if _, err := w.Write(mes); err != nil {
 		// TODO error
 		return
 	}

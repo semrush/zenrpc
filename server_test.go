@@ -179,8 +179,8 @@ func TestServer_ServeHTTPWithErrors(t *testing.T) {
 		in, out string
 	}{
 		{
-			in:  `{"jsonrpc": "2.0", "method": "multiple1" }`,
-			out: `{"jsonrpc":"2.0","id":null,"error":{"code":-32601,"message":"Method not found"}}`},
+			in:  `{"jsonrpc": "2.0", "method": "multiple1", "id": 1 }`,
+			out: `{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Method not found"}}`},
 		{
 			in:  `{"jsonrpc": "2.0", "method": "test.multiple1", "id": 1 }`,
 			out: `{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Method not found"}}`},
