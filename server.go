@@ -21,9 +21,17 @@ const (
 	// defaultTargetUrl is default value for SMD target url.
 	defaultTargetUrl = "/"
 
-	// context key for request object
+	// context key for http.Request object
 	requestKey contextKey = "request"
+
+	// context key for namespace
+	namespaceKey contextKey = "namespace"
 )
+
+type MiddlewareFunc func(InvokeFunc) InvokeFunc
+
+// InvokeFunc is a function for processing single JSON-RPC 2.0 Request after validation and parsing.
+type InvokeFunc func(context.Context, string, json.RawMessage) Response
 
 // Invoker implements service handler.
 type Invoker interface {
@@ -31,7 +39,7 @@ type Invoker interface {
 	SMD() smd.ServiceInfo
 }
 
-// Service is as struct for discovering JSON-RPC 2.0 serivces for generator cmd.
+// Service is as struct for discovering JSON-RPC 2.0 services for zenrpc generator cmd.
 type Service struct{}
 
 // Options is options for JSON-RPC 2.0 Server
@@ -48,8 +56,9 @@ type Options struct {
 
 // Server is JSON-RPC 2.0 Server.
 type Server struct {
-	services map[string]Invoker
-	options  Options
+	services   map[string]Invoker
+	options    Options
+	middleware []MiddlewareFunc
 }
 
 // NewServer returns new JSON-RPC 2.0 Server.
@@ -67,6 +76,11 @@ func NewServer(opts Options) Server {
 		services: make(map[string]Invoker),
 		options:  opts,
 	}
+}
+
+// Use registers middleware.
+func (s *Server) Use(m ...MiddlewareFunc) {
+	s.middleware = append(s.middleware, m...)
 }
 
 // Register registers new service for given namespace. For public namespace use empty string.
@@ -90,41 +104,47 @@ func (s *Server) process(ctx context.Context, message json.RawMessage) interface
 		return NewResponseError(nil, ParseError, "", nil)
 	}
 
-	reqLen := len(requests)
-
 	// if there no requests to process
-	if reqLen == 0 {
+	if len(requests) == 0 {
 		return NewResponseError(nil, InvalidRequest, "", nil)
-	}
-
-	if reqLen > s.options.BatchMaxLen {
+	} else if len(requests) > s.options.BatchMaxLen {
 		return NewResponseError(nil, InvalidRequest, "", "max requests length in batch exceeded")
 	}
 
-	// if request single and not notification  - just run it and return result
+	// process single request: if request single and not notification  - just run it and return result
 	if !batch && requests[0].ID != nil {
-		return s.processRequest(ctx, &requests[0])
+		return s.processRequest(ctx, requests[0])
 	}
+
+	// process batch requests
+	if res := s.processBatch(ctx, requests); len(res) > 0 {
+		return res
+	}
+
+	return nil
+}
+
+// processBatch process batch requests with context.
+func (s Server) processBatch(ctx context.Context, requests []Request) []Response {
+	reqLen := len(requests)
 
 	// running requests in batch asynchronously
 	respChan := make(chan Response, reqLen)
 	var wg sync.WaitGroup
 	wg.Add(reqLen)
 
-	for i := range requests {
+	for _, req := range requests {
 		// running request in goroutine
-		go func(req *Request) {
+		go func(req Request) {
 			if req.ID == nil {
 				// ignoring response if request is notification
 				wg.Done()
 				s.processRequest(ctx, req)
 			} else {
-				r := s.processRequest(ctx, req)
-				r.ID = req.ID
-				respChan <- r
+				respChan <- s.processRequest(ctx, req)
 				wg.Done()
 			}
-		}(&requests[i])
+		}(req)
 	}
 
 	// TODO what if one of requests freezes?
@@ -146,7 +166,7 @@ func (s *Server) process(ctx context.Context, message json.RawMessage) interface
 }
 
 // processRequest processes a single request in service invoker
-func (s Server) processRequest(ctx context.Context, req *Request) Response {
+func (s Server) processRequest(ctx context.Context, req Request) Response {
 	// checks for json-rpc version and method
 	if req.Version != Version || req.Method == "" {
 		return NewResponseError(req.ID, InvalidRequest, "", nil)
@@ -164,7 +184,17 @@ func (s Server) processRequest(ctx context.Context, req *Request) Response {
 		return NewResponseError(req.ID, MethodNotFound, "", nil)
 	}
 
-	resp := s.services[namespace].Invoke(ctx, method, req.Params)
+	// set namespace to context
+	ctx = newNamespaceContext(ctx, namespace)
+
+	// set middleware to func
+	f := InvokeFunc(s.services[namespace].Invoke)
+	for _, m := range s.middleware {
+		f = m(f)
+	}
+
+	// invoke func with middleware
+	resp := f(ctx, method, req.Params)
 	resp.ID = req.ID
 
 	return resp
@@ -193,15 +223,14 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mes, err := json.Marshal(data)
-	if err != nil {
-		return
+	// marshals data and write it to client.
+	if resp, err := json.Marshal(data); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	} else if _, err := w.Write(resp); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 	}
 
-	if _, err := w.Write(mes); err != nil {
-		// TODO error
-		return
-	}
+	return
 }
 
 // isBatch checks json message if it array or object
@@ -247,11 +276,27 @@ func (s Server) SMD() smd.Schema {
 	return sch
 }
 
+// newRequestContext creates new context with http.Request.
 func newRequestContext(ctx context.Context, req *http.Request) context.Context {
 	return context.WithValue(ctx, requestKey, req)
 }
 
+// RequestFromContext returns http.Request from context.
 func RequestFromContext(ctx context.Context) (*http.Request, bool) {
 	r, ok := ctx.Value(requestKey).(*http.Request)
 	return r, ok
+}
+
+// newNamespaceContext creates new context with current method namespace.
+func newNamespaceContext(ctx context.Context, namespace string) context.Context {
+	return context.WithValue(ctx, namespaceKey, namespace)
+}
+
+// NamespaceFromContext returns method's namespace from context.
+func NamespaceFromContext(ctx context.Context) string {
+	if r, ok := ctx.Value(namespaceKey).(string); ok {
+		return r
+	}
+
+	return ""
 }

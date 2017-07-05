@@ -188,6 +188,7 @@ var rpc = zenrpc.NewServer(zenrpc.Options{BatchMaxLen: 5})
 func init() {
 	rpc.Register("arith", &ArithService{})
 	rpc.Register("", &ArithService{})
+	//rpc.Use(zenrpc.Logger(log.New(os.Stderr, "", log.LstdFlags)))
 }
 
 func TestServer_ServeHTTP(t *testing.T) {
