@@ -8,14 +8,27 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+
+	"github.com/sergeyfast/zenrpc/smd"
 )
 
-// DefaultBatchMaxLen is default value of BatchMaxLen option in rpc Server options
-const DefaultBatchMaxLen = 10
+type contextKey string
+
+const (
+	// defaultBatchMaxLen is default value of BatchMaxLen option in rpc Server options
+	defaultBatchMaxLen = 10
+
+	// defaultTargetUrl is default value for SMD target url.
+	defaultTargetUrl = "/"
+
+	// context key for request object
+	requestKey contextKey = "request"
+)
 
 // Invoker implements service handler.
 type Invoker interface {
 	Invoke(ctx context.Context, method string, params json.RawMessage) Response
+	SMD() smd.ServiceInfo
 }
 
 // Service is as struct for discovering JSON-RPC 2.0 serivces for generator cmd.
@@ -25,6 +38,12 @@ type Service struct{}
 type Options struct {
 	// BatchMaxLen sets maximum quantity of requests in single batch
 	BatchMaxLen int
+
+	// TargetUrl is RPC endpoint.
+	TargetUrl string
+
+	// ExposeSMD exposes SMD schema with ?smd GET parameter.
+	ExposeSMD bool
 }
 
 // Server is JSON-RPC 2.0 Server.
@@ -37,7 +56,11 @@ type Server struct {
 func NewServer(opts Options) Server {
 	// For safety reasons we do not allowing to much requests in batch
 	if opts.BatchMaxLen == 0 {
-		opts.BatchMaxLen = DefaultBatchMaxLen
+		opts.BatchMaxLen = defaultBatchMaxLen
+	}
+
+	if opts.TargetUrl == "" {
+		opts.TargetUrl = defaultTargetUrl
 	}
 
 	return Server{
@@ -53,9 +76,7 @@ func (s *Server) Register(namespace string, service Invoker) {
 
 // process process JSON-RPC 2.0 message, invokes correct method for namespace and returns JSON-RPC 2.0 Response.
 func (s *Server) process(ctx context.Context, message json.RawMessage) interface{} {
-
 	requests := []Request{}
-
 	// parsing batch requests
 	batch := isBatch(message)
 
@@ -151,15 +172,20 @@ func (s Server) processRequest(ctx context.Context, req *Request) Response {
 
 // ServeHTTP process JSON-RPC 2.0 requests via HTTP.
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// check for smd parameter and server settings and write schema if all conditions met,
+	if _, ok := r.URL.Query()["smd"]; ok && s.options.ExposeSMD {
+		b, _ := json.Marshal(s.SMD())
+		w.Write(b)
+		return
+	}
+
 	b, err := ioutil.ReadAll(r.Body)
 	var data interface{}
-
-	ctx := context.WithValue(context.Background(), "IP", r.RemoteAddr)
 
 	if err != nil {
 		data = NewResponseError(nil, ParseError, "", nil)
 	} else {
-		data = s.process(ctx, b)
+		data = s.process(newRequestContext(r.Context(), r), b)
 	}
 
 	// if responses is empty -> all requests are notifications -> exit immediately
@@ -192,4 +218,40 @@ func isBatch(message json.RawMessage) bool {
 	}
 
 	return false
+}
+
+// SMD returns Service Mapping Description object with all registered methods.
+func (s Server) SMD() smd.Schema {
+	sch := smd.Schema{
+		Transport:   "POST",
+		Envelope:    "JSON-RPC-2.0",
+		SMDVersion:  "2.0",
+		ContentType: "application/json",
+		Target:      s.options.TargetUrl,
+		Services:    make(map[string]smd.Service),
+	}
+
+	for n, v := range s.services {
+		info, namespace := v.SMD(), ""
+		if n != "" {
+			namespace = n + "."
+		}
+
+		for m, d := range info.Methods {
+			method := namespace + m
+			sch.Services[method] = d
+			sch.Description += info.Description // TODO formatting
+		}
+	}
+
+	return sch
+}
+
+func newRequestContext(ctx context.Context, req *http.Request) context.Context {
+	return context.WithValue(ctx, requestKey, req)
+}
+
+func RequestFromContext(ctx context.Context) (*http.Request, bool) {
+	r, ok := ctx.Value(requestKey).(*http.Request)
+	return r, ok
 }

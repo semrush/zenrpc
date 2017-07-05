@@ -22,7 +22,6 @@ const (
 	// Invalid method parameter(s).
 	InvalidParams = -32602
 
-
 	// InternalError is error code defined by JSON-RPC 2.0 spec
 	// Internal JSON-RPC error.
 	InternalError = -32603

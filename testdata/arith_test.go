@@ -1,17 +1,18 @@
 package testdata
 
 import (
-	"testing"
-	"net/http/httptest"
-	"net/http"
 	"bytes"
-	"log"
 	"io/ioutil"
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/sergeyfast/zenrpc"
 )
 
 func TestServer_ServeHTTP(t *testing.T) {
-	var rpc = zenrpc.NewServer()
+	var rpc = zenrpc.NewServer(zenrpc.Options{})
 	rpc.Register("arith", &ArithService{})
 	rpc.Register("", &ArithService{})
 
@@ -61,4 +62,3 @@ func TestServer_ServeHTTP(t *testing.T) {
 		}
 	}
 }
-

@@ -13,8 +13,8 @@ TODO
 
   * [ ] Requests
     * [x] Single requests
-    * [ ] Batch requests
-    * [ ] Notifications
+    * [x] Batch requests
+    * [x] Notifications
   * [ ] Parameters
     * [x] Named
     * [ ] Position
