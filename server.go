@@ -69,7 +69,7 @@ func (s *Server) process(ctx context.Context, message json.RawMessage) Response 
 }
 
 // ServeHTTP process JSON-RPC 2.0 requests via HTTP.
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	b, err := ioutil.ReadAll(r.Body)
 	var data Response
 
