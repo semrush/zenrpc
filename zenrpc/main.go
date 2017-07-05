@@ -33,14 +33,13 @@ func main() {
 
 	log.Printf("Entrypoint: %s", filename)
 
-	structData := StructData{}
-	structData.Services = make(map[string]Service)
-	dir, err := parseFiles(filename, &structData)
+	sd := packageInfo{Services: make(map[string]service)}
+	dir, err := sd.parseFiles(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	outputFileName, err := generateFile(dir, &structData)
+	outputFileName, err := sd.generateFile(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -48,27 +47,27 @@ func main() {
 	log.Printf("Generated: %s", outputFileName)
 }
 
-// StructData represents struct info for XXX_zenrpc.go file generation.
-type StructData struct {
+// packageInfo represents struct info for XXX_zenrpc.go file generation
+type packageInfo struct {
 	PackageName string
-	Services    map[string]Service
+	Services    map[string]service
 }
 
-type Service struct {
+type service struct {
 	GenDecl *ast.GenDecl
 	Name    string
-	Methods map[string]*Method
+	Methods map[string]*method
 }
 
-type Method struct {
+type method struct {
 	FuncDecl      *ast.FuncType
 	Name          string
 	LowerCaseName string
 	HasContext    bool
-	Args          []Arg
+	Args          []arg
 }
 
-type Arg struct {
+type arg struct {
 	Name        string
 	Type        string
 	CapitalName string
@@ -76,7 +75,7 @@ type Arg struct {
 }
 
 // parseFiles parse all files associated with package from original file
-func parseFiles(filename string, structData *StructData) (string, error) {
+func (pi *packageInfo) parseFiles(filename string) (string, error) {
 	dir, err := filepath.Abs(filepath.Dir(filename))
 	if err != nil {
 		return dir, err
@@ -95,7 +94,7 @@ func parseFiles(filename string, structData *StructData) (string, error) {
 			continue
 		}
 
-		if err := parseFile(filepath.Join(dir, f.Name()), structData); err != nil {
+		if err := pi.parseFile(filepath.Join(dir, f.Name())); err != nil {
 			return dir, err
 		}
 	}
@@ -103,8 +102,8 @@ func parseFiles(filename string, structData *StructData) (string, error) {
 	return dir, nil
 }
 
-func generateFile(dir string, structData *StructData) (string, error) {
-	outputFileName := filepath.Join(dir, structData.PackageName+generateFileSuffix)
+func (pi *packageInfo) generateFile(dir string) (string, error) {
+	outputFileName := filepath.Join(dir, pi.PackageName+generateFileSuffix)
 	file, err := os.Create(outputFileName)
 	if err != nil {
 		return outputFileName, err
@@ -112,7 +111,7 @@ func generateFile(dir string, structData *StructData) (string, error) {
 	defer file.Close()
 
 	output := new(bytes.Buffer)
-	if err := serviceTemplate.Execute(output, structData); err != nil {
+	if err := serviceTemplate.Execute(output, pi); err != nil {
 		return outputFileName, err
 	}
 
@@ -128,7 +127,7 @@ func generateFile(dir string, structData *StructData) (string, error) {
 	return outputFileName, nil
 }
 
-func parseFile(filename string, data *StructData) error {
+func (pi *packageInfo) parseFile(filename string) error {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
 	if err != nil {
@@ -136,9 +135,9 @@ func parseFile(filename string, data *StructData) error {
 	}
 	//ast.Print(fset, f) // TODO remove
 
-	if len(data.PackageName) == 0 {
-		data.PackageName = f.Name.Name
-	} else if data.PackageName != f.Name.Name {
+	if len(pi.PackageName) == 0 {
+		pi.PackageName = f.Name.Name
+	} else if pi.PackageName != f.Name.Name {
 		return nil
 	}
 
@@ -166,7 +165,7 @@ func parseFile(filename string, data *StructData) error {
 
 			// check that struct is our zenrpc struct
 			if hasZenrpcComment(spec) || hasZenrpcService(structType) {
-				data.Services[spec.Name.Name] = Service{gdecl, spec.Name.Name, make(map[string]*Method)}
+				pi.Services[spec.Name.Name] = service{gdecl, spec.Name.Name, make(map[string]*method)}
 			}
 		}
 	}
@@ -178,11 +177,11 @@ func parseFile(filename string, data *StructData) error {
 			continue
 		}
 
-		method := Method{
+		method := method{
 			FuncDecl:      fdecl.Type,
 			Name:          fdecl.Name.Name,
 			LowerCaseName: strings.ToLower(fdecl.Name.Name),
-			Args:          []Arg{},
+			Args:          []arg{},
 		}
 
 		for _, field := range fdecl.Recv.List {
@@ -198,7 +197,7 @@ func parseFile(filename string, data *StructData) error {
 
 			// find service in our service list
 			// method can be in several services
-			if _, ok := data.Services[ident.Name]; !ok {
+			if _, ok := pi.Services[ident.Name]; !ok {
 				continue
 			}
 
@@ -206,7 +205,7 @@ func parseFile(filename string, data *StructData) error {
 				continue
 			}
 
-			data.Services[ident.Name].Methods[fdecl.Name.Name] = &method
+			pi.Services[ident.Name].Methods[fdecl.Name.Name] = &method
 		}
 
 		// parse arguments
@@ -247,7 +246,7 @@ func parseFile(filename string, data *StructData) error {
 
 			// parse names
 			for _, name := range field.Names {
-				method.Args = append(method.Args, Arg{
+				method.Args = append(method.Args, arg{
 					Name:        name.Name,
 					Type:        typeName,
 					CapitalName: strings.Title(name.Name),

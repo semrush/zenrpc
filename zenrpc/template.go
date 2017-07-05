@@ -15,9 +15,14 @@ import (
 	"context"
 
 	"github.com/sergeyfast/zenrpc"
+	"github.com/sergeyfast/zenrpc/smd"
 )
 
 {{ range .Services}}
+func ({{.Name}}) SMD() smd.ServiceInfo {
+	return smd.ServiceInfo{}
+}
+
 // Invoke is as generated code from zenrpc cmd
 func (s {{.Name}}) Invoke(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
 	resp := zenrpc.Response{}
@@ -28,8 +33,7 @@ func (s {{.Name}}) Invoke(ctx context.Context, method string, params json.RawMes
 		// A int ` + "`json:\"a\"`" + `
 		var args = struct {
 			{{ range .Args }}
-			{{.CapitalName}} {{.Type}} ` + "`json:\"{{.JsonName}}\"`" + `
-			{{ end }}
+			{{.CapitalName}} {{.Type}} ` + "`json:\"{{.JsonName}}\"`" + ` {{ end }}
 		}{}
 
 		if err := json.Unmarshal(params, &args); err != nil {
