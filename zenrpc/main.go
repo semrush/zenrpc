@@ -6,6 +6,7 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -15,10 +16,11 @@ import (
 )
 
 const (
-	zenrpcComment       = "//zenrpc"
-	zenrpcService       = "zenrpc.Service"
-	contextTypeName     = "context.Context"
-	generateFilePostfix = "_zenrpc.go"
+	zenrpcComment      = "//zenrpc"
+	zenrpcService      = "zenrpc.Service"
+	contextTypeName    = "context.Context"
+	generateFileSuffix = "_zenrpc.go"
+	testFileSuffix     = "_test.go"
 )
 
 func main() {
@@ -30,33 +32,20 @@ func main() {
 	}
 
 	log.Printf("Entrypoint: %s", filename)
-	structData, err := parse(filename)
-	die(err)
 
-	dir, err := filepath.Abs(filepath.Dir(filename))
-	die(err)
-
-	outputFileName := filepath.Join(dir, structData.PackageName+generateFilePostfix)
-	file, err := os.Create(outputFileName)
-	die(err)
-	defer file.Close()
-
-	output := new(bytes.Buffer)
-	die(serviceTemplate.Execute(output, structData))
-
-	source, err := format.Source(output.Bytes())
-	die(err)
-
-	_, err = file.Write(source)
-	die(err)
-
-	log.Printf("Generated: %s", outputFileName)
-}
-
-func die(err error) {
+	structData := StructData{}
+	structData.Services = make(map[string]Service)
+	dir, err := parseFiles(filename, &structData)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	outputFileName, err := generateFile(dir, &structData)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("Generated: %s", outputFileName)
 }
 
 // StructData represents struct info for XXX_zenrpc.go file generation.
@@ -86,19 +75,74 @@ type Arg struct {
 	JsonName    string
 }
 
-func parse(filename string) (StructData, error) {
-	data := StructData{}
+// parseFiles parse all files associated with package from original file
+func parseFiles(filename string, structData *StructData) (string, error) {
+	dir, err := filepath.Abs(filepath.Dir(filename))
+	if err != nil {
+		return dir, err
+	}
+
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return dir, err
+	}
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+
+		if strings.HasSuffix(f.Name(), generateFileSuffix) || strings.HasSuffix(f.Name(), testFileSuffix) {
+			continue
+		}
+
+		if err := parseFile(filepath.Join(dir, f.Name()), structData); err != nil {
+			return dir, err
+		}
+	}
+
+	return dir, nil
+}
+
+func generateFile(dir string, structData *StructData) (string, error) {
+	outputFileName := filepath.Join(dir, structData.PackageName+generateFileSuffix)
+	file, err := os.Create(outputFileName)
+	if err != nil {
+		return outputFileName, err
+	}
+	defer file.Close()
+
+	output := new(bytes.Buffer)
+	if err := serviceTemplate.Execute(output, structData); err != nil {
+		return outputFileName, err
+	}
+
+	source, err := format.Source(output.Bytes())
+	if err != nil {
+		return outputFileName, err
+	}
+
+	if _, err = file.Write(source); err != nil {
+		return outputFileName, err
+	}
+
+	return outputFileName, nil
+}
+
+func parseFile(filename string, data *StructData) error {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
 	if err != nil {
-		return data, err
+		return err
 	}
 	//ast.Print(fset, f) // TODO remove
 
-	data.PackageName = f.Name.Name
+	if len(data.PackageName) == 0 {
+		data.PackageName = f.Name.Name
+	} else if data.PackageName != f.Name.Name {
+		return nil
+	}
 
 	// get structs for zenrpc
-	data.Services = make(map[string]Service)
 	for _, decl := range f.Decls {
 		gdecl, ok := decl.(*ast.GenDecl)
 		if !ok || gdecl.Tok != token.TYPE {
@@ -213,7 +257,7 @@ func parse(filename string) (StructData, error) {
 		}
 	}
 
-	return data, nil
+	return nil
 }
 
 func hasZenrpcComment(spec *ast.TypeSpec) bool {
