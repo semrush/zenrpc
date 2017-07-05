@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"flag"
 	"go/ast"
 	"go/format"
 	"go/parser"
@@ -23,12 +22,11 @@ const (
 )
 
 func main() {
-	args := flag.Args()
 	var filename string
-	if len(args) == 0 {
-		filename = os.Getenv("GOFILE")
+	if len(os.Args) > 1 {
+		filename = os.Args[len(os.Args)-1]
 	} else {
-		filename = args[0]
+		filename = os.Getenv("GOFILE")
 	}
 
 	log.Printf("Entrypoint: %s", filename)
