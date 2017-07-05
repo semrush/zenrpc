@@ -7,7 +7,100 @@ It's built on top of `go generate` instead of reflection.
 
 # How to Use
 
-TODO
+```Service is struct with RPC methods, service represents RPC namespace.```
+
+  1. Install zenrpc generator `go get github.com/sergeyfast/zenrpc/zenrpc`
+  1. Import `github.com/sergeyfast/zenrpc` into our code with rpc service.
+  1. Add trailing comment `//zenrpc` to your service or embed `zenrpc.Service` into your service struct.
+  1. Write your funcs almost as usual.
+  1. Do not forget run `go generate` or `zenrpc` for magic
+  
+## Example
+```go
+package main
+
+import (
+	"flag"
+	"context"
+	"errors"
+	"math"
+	"log"
+	"net/http"
+	"os"	
+	
+	"github.com/sergeyfast/zenrpc"
+	"github.com/sergeyfast/zenrpc/testdata"
+)
+
+type ArithService struct{ zenrpc.Service }
+
+// Sum sums two digits and returns error with error code as result and IP from context.
+func (as ArithService) Sum(ctx context.Context, a, b int) (bool, *zenrpc.Error) {
+	r, _ := zenrpc.RequestFromContext(ctx)
+
+	return true, zenrpc.NewStringError(a+b, r.Host)
+}
+
+// Multiply multiples two digits and returns result.
+func (as ArithService) Multiply(a, b int) int {
+	return a * b
+}
+
+type Quotient struct {
+	Quo, Rem int
+}
+
+func (as ArithService) Divide(a, b int) (quo *Quotient, err error) {
+	if b == 0 {
+		return nil, errors.New("divide by zero")
+	} else if b == 1 {
+		return nil, zenrpc.NewError(401, errors.New("we do not serve 1"))
+	}
+
+	return &Quotient{
+		Quo: a / b,
+		Rem: a % b,
+	}, nil
+}
+
+// Pow returns x**y, the base-x exponential of y. If Exp is not set then default value is 2.
+//zenrpc:exp:2
+func (as ArithService) Pow(base float64, exp float64) float64 {
+	return math.Pow(base, exp)
+}
+
+//go:generate zenrpc
+
+func main() {
+	addr := flag.String("addr", "localhost:9999", "listen address")
+	flag.Parse()
+
+	rpc := zenrpc.NewServer(zenrpc.Options{ExposeSMD: true})
+	rpc.Register("arith", testdata.ArithService{})
+	rpc.Register("", testdata.ArithService{}) // public
+	rpc.Use(zenrpc.Logger(log.New(os.Stderr, "", log.LstdFlags)))
+
+	http.Handle("/", rpc)
+
+	log.Printf("starting arithsrv on %s", *addr)
+	log.Fatal(http.ListenAndServe(*addr, nil))
+}
+
+```
+
+
+## Magic comments
+
+All comments are optional.
+
+    Method comments
+    //zenrpc:<method parameter>[:<default value>][whitespaces<description>]
+    //zenrpc:<error code>[whitespaces<description>] 
+     
+    Struct comments
+    type MyService struct {} //zenrpc
+    
+
 
 # JSON-RPC 2.0 Supported Features
 

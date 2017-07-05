@@ -74,7 +74,6 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 		// A int `json:"a"`
 		var args = struct {
 			A int `json:"a"`
-
 			B int `json:"b"`
 		}{}
 
@@ -88,7 +87,6 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 		// A int `json:"a"`
 		var args = struct {
 			A int `json:"a"`
-
 			B int `json:"b"`
 		}{}
 
@@ -102,8 +100,7 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 		// A int `json:"a"`
 		var args = struct {
 			Base float64 `json:"base"`
-
-			Exp float64 `json:"exp"`
+			Exp  float64 `json:"exp"`
 		}{}
 
 		if err := json.Unmarshal(params, &args); err != nil {
@@ -116,7 +113,6 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 		// A int `json:"a"`
 		var args = struct {
 			A int `json:"a"`
-
 			B int `json:"b"`
 		}{}
 

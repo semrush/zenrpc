@@ -6,6 +6,7 @@ import (
 	"github.com/sergeyfast/zenrpc/testdata"
 	"log"
 	"net/http"
+	"os"
 )
 
 func main() {
@@ -15,6 +16,7 @@ func main() {
 	rpc := zenrpc.NewServer(zenrpc.Options{ExposeSMD: true})
 	rpc.Register("arith", testdata.ArithService{})
 	rpc.Register("", testdata.ArithService{}) // public
+	rpc.Use(zenrpc.Logger(log.New(os.Stderr, "", log.LstdFlags)))
 
 	http.Handle("/", rpc)
 
