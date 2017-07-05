@@ -10,6 +10,8 @@ import (
 	"unicode"
 )
 
+const DefaultBatchMaxLen = 10
+
 // Invoker implements service handler.
 type Invoker interface {
 	Invoke(ctx context.Context, method string, params json.RawMessage) Response
@@ -18,15 +20,28 @@ type Invoker interface {
 // Service is as struct for discovering JSON-RPC 2.0 serivces for generator cmd.
 type Service struct{}
 
+// Options is options for JSON-RPC 2.0 Server
+type Options struct {
+	// maxBatchRequests sets maximum quantity of requests in single batch
+	BatchMaxLen int
+}
+
 // Server is JSON-RPC 2.0 Server.
 type Server struct {
 	services map[string]Invoker
+	options  Options
 }
 
 // NewServer returns new JSON-RPC 2.0 Server.
-func NewServer() Server {
+func NewServer(opts Options) Server {
+	// For safety reasons we do not allowing to much requests in batch
+	if opts.BatchMaxLen == 0 {
+		opts.BatchMaxLen = DefaultBatchMaxLen
+	}
+
 	return Server{
 		services: make(map[string]Invoker),
+		options:  opts,
 	}
 }
 
@@ -41,17 +56,7 @@ func (s *Server) process(ctx context.Context, message json.RawMessage) interface
 	requests := []Request{}
 
 	// parsing batch requests
-	batch := false
-	for _, b := range message {
-		if unicode.IsSpace(rune(b)) {
-			continue
-		}
-
-		if b == '[' {
-			batch = true
-		}
-		break
-	}
+	batch := isBatch(message)
 
 	// making not batch request looks like batch to simplify further code
 	if !batch {
@@ -63,30 +68,41 @@ func (s *Server) process(ctx context.Context, message json.RawMessage) interface
 		return NewResponseError(nil, ParseError, "", nil)
 	}
 
+	reqLen := len(requests)
+
 	// if there no requests to process
-	if len(requests) == 0 {
+	if reqLen == 0 {
 		return NewResponseError(nil, InvalidRequest, "", nil)
 	}
 
-	// running request asynchronously
-	reqLen := len(requests)
+	if reqLen > s.options.BatchMaxLen {
+		return NewResponseError(nil, InvalidRequest, "", "max requests length in batch exceeded")
+	}
+
+	// if request single and not notification  - just run it and return result
+	if !batch && requests[0].Id != nil {
+		return s.processRequest(ctx, &requests[0])
+	}
+
+	// running requests in batch asynchronously
 	respChan := make(chan Response, reqLen)
 	var wg sync.WaitGroup
 	wg.Add(reqLen)
 
-	for _, req := range requests {
-		// running request in gorutine
-		go func() {
+	for i := range requests {
+		// running request in goroutine
+		go func(req *Request) {
 			if req.Id == nil {
+				// ignoring response if request is notification
 				wg.Done()
-				s.processRequest(ctx, &req)
+				s.processRequest(ctx, req)
 			} else {
-				r := s.processRequest(ctx, &req)
+				r := s.processRequest(ctx, req)
 				r.Id = req.Id
 				respChan <- r
 				wg.Done()
 			}
-		}()
+		}(&requests[i])
 	}
 
 	// TODO what if one of requests freezes?
@@ -100,17 +116,15 @@ func (s *Server) process(ctx context.Context, message json.RawMessage) interface
 		responses = append(responses, r)
 	}
 
-	// sending single response or array of responses if batch
-	if batch {
-		return responses
-	} else if len(responses) == 0 {
-		// no responses -> all requests are notifications
+	// no responses -> all requests are notifications
+	if len(responses) == 0 {
 		return nil
 	} else {
-		return responses[0]
+		return responses
 	}
 }
 
+// processRequest processes a single request in service invoker
 func (s Server) processRequest(ctx context.Context, req *Request) Response {
 	// checks for json-rpc version and method
 	if req.Version != Version || req.Method == "" {
@@ -162,4 +176,20 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// TODO error
 		return
 	}
+}
+
+// isBatch checks json message if it array or object
+func isBatch(message json.RawMessage) bool {
+	for _, b := range message {
+		if unicode.IsSpace(rune(b)) {
+			continue
+		}
+
+		if b == '[' {
+			return true
+		}
+		break
+	}
+
+	return false
 }
