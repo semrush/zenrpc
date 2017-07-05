@@ -10,6 +10,7 @@ import (
 	"unicode"
 )
 
+// DefaultBatchMaxLen is default value of BatchMaxLen option in rpc Server options
 const DefaultBatchMaxLen = 10
 
 // Invoker implements service handler.
@@ -22,7 +23,7 @@ type Service struct{}
 
 // Options is options for JSON-RPC 2.0 Server
 type Options struct {
-	// maxBatchRequests sets maximum quantity of requests in single batch
+	// BatchMaxLen sets maximum quantity of requests in single batch
 	BatchMaxLen int
 }
 
@@ -80,7 +81,7 @@ func (s *Server) process(ctx context.Context, message json.RawMessage) interface
 	}
 
 	// if request single and not notification  - just run it and return result
-	if !batch && requests[0].Id != nil {
+	if !batch && requests[0].ID != nil {
 		return s.processRequest(ctx, &requests[0])
 	}
 
@@ -92,13 +93,13 @@ func (s *Server) process(ctx context.Context, message json.RawMessage) interface
 	for i := range requests {
 		// running request in goroutine
 		go func(req *Request) {
-			if req.Id == nil {
+			if req.ID == nil {
 				// ignoring response if request is notification
 				wg.Done()
 				s.processRequest(ctx, req)
 			} else {
 				r := s.processRequest(ctx, req)
-				r.Id = req.Id
+				r.ID = req.ID
 				respChan <- r
 				wg.Done()
 			}
@@ -119,16 +120,15 @@ func (s *Server) process(ctx context.Context, message json.RawMessage) interface
 	// no responses -> all requests are notifications
 	if len(responses) == 0 {
 		return nil
-	} else {
-		return responses
 	}
+	return responses
 }
 
 // processRequest processes a single request in service invoker
 func (s Server) processRequest(ctx context.Context, req *Request) Response {
 	// checks for json-rpc version and method
 	if req.Version != Version || req.Method == "" {
-		return NewResponseError(req.Id, InvalidRequest, "", nil)
+		return NewResponseError(req.ID, InvalidRequest, "", nil)
 	}
 
 	// convert method to lower and find namespace
@@ -140,11 +140,11 @@ func (s Server) processRequest(ctx context.Context, req *Request) Response {
 	}
 
 	if _, ok := s.services[namespace]; !ok {
-		return NewResponseError(req.Id, MethodNotFound, "", nil)
+		return NewResponseError(req.ID, MethodNotFound, "", nil)
 	}
 
 	resp := s.services[namespace].Invoke(ctx, method, req.Params)
-	resp.Id = req.Id
+	resp.ID = req.ID
 
 	return resp
 }

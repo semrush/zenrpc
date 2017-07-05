@@ -5,26 +5,33 @@ import (
 )
 
 const (
+	// ParseError is error code defined by JSON-RPC 2.0 spec
 	// Invalid JSON was received by the server.
 	// An error occurred on the server while parsing the JSON text.
 	ParseError = -32700
 
+	// InvalidRequest is error code defined by JSON-RPC 2.0 spec
 	// The JSON sent is not as valid Request object.
 	InvalidRequest = -32600
 
+	// MethodNotFound is error code defined by JSON-RPC 2.0 spec
 	// The method does not exist / is not available.
 	MethodNotFound = -32601
 
+	// InvalidParams is error code defined by JSON-RPC 2.0 spec
 	// Invalid method parameter(s).
 	InvalidParams = -32602
 
+
+	// InternalError is error code defined by JSON-RPC 2.0 spec
 	// Internal JSON-RPC error.
 	InternalError = -32603
 
+	// ServerError is error code defined by JSON-RPC 2.0 spec
 	// Reserved for implementation-defined server-errors.
 	ServerError = -32000
 
-	// JSON-RPC Version
+	// Version is only supported JSON-RPC Version
 	Version = "2.0"
 )
 
@@ -42,7 +49,7 @@ func ErrorMsg(code int) string {
 	return errorMessages[code]
 }
 
-// Json structure for json-rpc request to server. See:
+// Request is a json structure for json-rpc request to server. See:
 // http://www.jsonrpc.org/specification#request_object
 //easyjson:json
 type Request struct {
@@ -52,7 +59,7 @@ type Request struct {
 	// An identifier established by the Client that MUST contain as String, Number, or NULL value if included.
 	// If it is not included it is assumed to be as notification.
 	// The value SHOULD normally not be Null [1] and Numbers SHOULD NOT contain fractional parts
-	Id *json.RawMessage `json:"id"`
+	ID *json.RawMessage `json:"id"`
 
 	// A String containing the name of the method to be invoked.
 	// Method names that begin with the word rpc followed by as period character (U+002E or ASCII 46)
@@ -67,7 +74,7 @@ type Request struct {
 	Namespace string `json:"-"`
 }
 
-// Json structure for json-rpc response from server. See:
+// Response is json structure for json-rpc response from server. See:
 // http://www.jsonrpc.org/specification#response_object
 //easyjson:json
 type Response struct {
@@ -77,7 +84,7 @@ type Response struct {
 	// This member is REQUIRED.
 	// It MUST be the same as the value of the id member in the Request Object.
 	// If there was an error in detecting the id in the Request object (e.g. Parse error/Invalid Request), it MUST be Null.
-	Id *json.RawMessage `json:"id"`
+	ID *json.RawMessage `json:"id"`
 
 	// This member is REQUIRED on success.
 	// This member MUST NOT exist if there was an error invoking the method.
@@ -90,6 +97,7 @@ type Response struct {
 	Error *Error `json:"error,omitempty"`
 }
 
+// JSON is temporary method that silences error during json marshalling
 func (r Response) JSON() []byte {
 	// TODO process error
 	b, _ := json.Marshal(r)
@@ -147,7 +155,7 @@ func NewResponseError(id *json.RawMessage, code int, message string, data interf
 
 	return Response{
 		Version: Version,
-		Id:      id,
+		ID:      id,
 		Error: &Error{
 			Code:    code,
 			Message: message,
