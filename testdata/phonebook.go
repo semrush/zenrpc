@@ -89,8 +89,6 @@ type PhoneBook struct {
 	id uint64
 } //zenrpc
 
-//go:generate zenrpc
-
 // Get returns all people from DB.
 //zenrpc:page:0 current page
 //zenrpc:count:50 page size

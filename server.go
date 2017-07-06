@@ -26,6 +26,9 @@ const (
 
 	// context key for namespace
 	namespaceKey contextKey = "namespace"
+
+	// contentTypeJSON is default content type for HTTP transport.
+	contentTypeJSON = "application/json"
 )
 
 type MiddlewareFunc func(InvokeFunc) InvokeFunc
@@ -52,6 +55,12 @@ type Options struct {
 
 	// ExposeSMD exposes SMD schema with ?smd GET parameter.
 	ExposeSMD bool
+
+	// DisableTransportChecks disables Content-Type and methods checks. Use only for development mode.
+	DisableTransportChecks bool
+
+	// AllowCORS adds header Access-Control-Allow-Origin with *.
+	AllowCORS bool
 }
 
 // Server is JSON-RPC 2.0 Server.
@@ -201,14 +210,30 @@ func (s Server) processRequest(ctx context.Context, req Request) Response {
 }
 
 // ServeHTTP process JSON-RPC 2.0 requests via HTTP.
+// http://www.simple-is-better.org/json-rpc/transport_http.html
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// check for smd parameter and server settings and write schema if all conditions met,
-	if _, ok := r.URL.Query()["smd"]; ok && s.options.ExposeSMD {
+	if _, ok := r.URL.Query()["smd"]; ok && s.options.ExposeSMD && r.Method == http.MethodGet {
 		b, _ := json.Marshal(s.SMD())
 		w.Write(b)
 		return
 	}
 
+	// check for content-type and POST method.
+	if !s.options.DisableTransportChecks {
+		if r.Header.Get("Content-Type") != contentTypeJSON {
+			w.WriteHeader(http.StatusUnsupportedMediaType)
+			return
+		} else if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		} else if r.Method != http.MethodPost {
+			// skip rpc calls
+			return
+		}
+	}
+
+	// ok, method is POST and content-type is application/json, process body
 	b, err := ioutil.ReadAll(r.Body)
 	var data interface{}
 
@@ -221,6 +246,12 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// if responses is empty -> all requests are notifications -> exit immediately
 	if data == nil {
 		return
+	}
+
+	// set headers
+	w.Header().Set("Content-Type", contentTypeJSON)
+	if s.options.AllowCORS {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 	}
 
 	// marshals data and write it to client.
@@ -255,7 +286,7 @@ func (s Server) SMD() smd.Schema {
 		Transport:   "POST",
 		Envelope:    "JSON-RPC-2.0",
 		SMDVersion:  "2.0",
-		ContentType: "application/json",
+		ContentType: contentTypeJSON,
 		Target:      s.options.TargetUrl,
 		Services:    make(map[string]smd.Service),
 	}
