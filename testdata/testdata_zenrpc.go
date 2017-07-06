@@ -11,15 +11,16 @@ import (
 )
 
 var RPC = struct {
-	ArithService struct{ Sum, Positive, Multiply, Divide, Pow, SumArray string }
+	ArithService struct{ Sum, Positive, Multiply, Divide, Pow, Pi, SumArray string }
 	PhoneBook    struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }
 }{
-	ArithService: struct{ Sum, Positive, Multiply, Divide, Pow, SumArray string }{
+	ArithService: struct{ Sum, Positive, Multiply, Divide, Pow, Pi, SumArray string }{
 		Sum:      "sum",
 		Positive: "positive",
 		Multiply: "multiply",
 		Divide:   "divide",
 		Pow:      "pow",
+		Pi:       "pi",
 		SumArray: "sumarray",
 	},
 	PhoneBook: struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }{
@@ -68,6 +69,10 @@ func (ArithService) SMD() smd.ServiceInfo {
 					{Name: "exp", Optional: true, Description: `exponent could be empty`, Type: smd.Float},
 				},
 			},
+			"Pi": {
+				Description: `PI returns math.Pi.`,
+				Parameters:  []smd.JSONSchema{},
+			},
 			"SumArray": {
 				Description: `SumArray returns sum all items from array`,
 				Parameters: []smd.JSONSchema{
@@ -81,6 +86,7 @@ func (ArithService) SMD() smd.ServiceInfo {
 // Invoke is as generated code from zenrpc cmd
 func (s ArithService) Invoke(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
 	resp := zenrpc.Response{}
+	var err error
 
 	switch method {
 	case RPC.ArithService.Sum:
@@ -89,8 +95,16 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 			B int `json:"b"`
 		}{}
 
-		if err := json.Unmarshal(params, &args); err != nil {
-			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"a", "b"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
 		}
 
 		resp.Set(s.Sum(ctx, args.A, args.B))
@@ -98,8 +112,16 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 		var args = struct {
 		}{}
 
-		if err := json.Unmarshal(params, &args); err != nil {
-			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
 		}
 
 		resp.Set(s.Positive())
@@ -109,8 +131,16 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 			B int `json:"b"`
 		}{}
 
-		if err := json.Unmarshal(params, &args); err != nil {
-			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"a", "b"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
 		}
 
 		resp.Set(s.Multiply(args.A, args.B))
@@ -120,8 +150,16 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 			B int `json:"b"`
 		}{}
 
-		if err := json.Unmarshal(params, &args); err != nil {
-			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"a", "b"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
 		}
 
 		resp.Set(s.Divide(args.A, args.B))
@@ -131,8 +169,16 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 			Exp  *float64 `json:"exp"`
 		}{}
 
-		if err := json.Unmarshal(params, &args); err != nil {
-			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"base", "exp"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
 		}
 
 		//zenrpc:exp:2 	exponent could be empty
@@ -142,13 +188,38 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 		}
 
 		resp.Set(s.Pow(args.Base, args.Exp))
+	case RPC.ArithService.Pi:
+		var args = struct {
+		}{}
+
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		resp.Set(s.Pi())
 	case RPC.ArithService.SumArray:
 		var args = struct {
 			Array *[]float64 `json:"array"`
 		}{}
 
-		if err := json.Unmarshal(params, &args); err != nil {
-			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"array"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
 		}
 
 		//zenrpc:array:[]float64{1,2,4}
@@ -215,6 +286,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 // Invoke is as generated code from zenrpc cmd
 func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
 	resp := zenrpc.Response{}
+	var err error
 
 	switch method {
 	case RPC.PhoneBook.Get:
@@ -224,8 +296,16 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 			Count  *int         `json:"count"`
 		}{}
 
-		if err := json.Unmarshal(params, &args); err != nil {
-			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"search", "page", "count"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
 		}
 
 		//zenrpc:page:0 current page
@@ -246,8 +326,16 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 			Search *PersonSearch `json:"search"`
 		}{}
 
-		if err := json.Unmarshal(params, &args); err != nil {
-			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"search"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
 		}
 
 		resp.Set(s.ValidateSearch(args.Search))
@@ -256,8 +344,16 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 			Id uint64 `json:"id"`
 		}{}
 
-		if err := json.Unmarshal(params, &args); err != nil {
-			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"id"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
 		}
 
 		resp.Set(s.ById(args.Id))
@@ -266,8 +362,16 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 			Id uint64 `json:"id"`
 		}{}
 
-		if err := json.Unmarshal(params, &args); err != nil {
-			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"id"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
 		}
 
 		resp.Set(s.Delete(args.Id))
@@ -276,8 +380,16 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 			Id uint64 `json:"id"`
 		}{}
 
-		if err := json.Unmarshal(params, &args); err != nil {
-			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"id"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
 		}
 
 		resp.Set(s.Remove(args.Id))
@@ -287,8 +399,16 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 			Replace *bool  `json:"replace"`
 		}{}
 
-		if err := json.Unmarshal(params, &args); err != nil {
-			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"p", "replace"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
 		}
 
 		//zenrpc:replace:false update person if exist

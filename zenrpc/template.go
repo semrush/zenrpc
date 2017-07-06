@@ -45,6 +45,7 @@ func ({{.Name}}) SMD() smd.ServiceInfo {
 // Invoke is as generated code from zenrpc cmd
 func (s {{.Name}}) Invoke(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
 	resp := zenrpc.Response{}
+	var err error
 
 	switch method { {{range .Methods }}
 	case RPC.{{$s.Name}}.{{.Name}}:
@@ -53,8 +54,16 @@ func (s {{.Name}}) Invoke(ctx context.Context, method string, params json.RawMes
 			{{.CapitalName}} {{.Type}} ` + "`json:\"{{.JsonName}}\"`" + ` {{ end }}
 		}{}
 
-		if err := json.Unmarshal(params, &args); err != nil {
-			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{ {{ range .Args }}"{{.JsonName}}",{{ end }} }, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
 		}
 
 		{{ range .DefaultValues }}

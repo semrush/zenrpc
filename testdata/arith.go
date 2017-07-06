@@ -25,8 +25,13 @@ func (as ArithService) Multiply(a, b int) int {
 	return a * b
 }
 
+// Quotient docs
 type Quotient struct {
-	Quo, Rem int
+	// Quo docs
+	Quo int
+
+	// Rem docs
+	Rem int `json:"rem"`
 }
 
 // Divide divides two numbers.
@@ -52,6 +57,11 @@ func (as *ArithService) Divide(a, b int) (quo *Quotient, err error) {
 //zenrpc:exp:2 	exponent could be empty
 func (as *ArithService) Pow(base float64, exp *float64) float64 {
 	return math.Pow(base, *exp)
+}
+
+// PI returns math.Pi.
+func (ArithService) Pi() float64 {
+	return math.Pi
 }
 
 // SumArray returns sum all items from array
