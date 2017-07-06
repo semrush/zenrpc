@@ -1,8 +1,10 @@
 package zenrpc
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -18,8 +20,8 @@ const (
 	// defaultBatchMaxLen is default value of BatchMaxLen option in rpc Server options
 	defaultBatchMaxLen = 10
 
-	// defaultTargetUrl is default value for SMD target url.
-	defaultTargetUrl = "/"
+	// defaultTargetURL is default value for SMD target url.
+	defaultTargetURL = "/"
 
 	// context key for http.Request object
 	requestKey contextKey = "request"
@@ -31,6 +33,7 @@ const (
 	contentTypeJSON = "application/json"
 )
 
+// MiddlewareFunc is a function for executing as middleware
 type MiddlewareFunc func(InvokeFunc) InvokeFunc
 
 // InvokeFunc is a function for processing single JSON-RPC 2.0 Request after validation and parsing.
@@ -50,8 +53,8 @@ type Options struct {
 	// BatchMaxLen sets maximum quantity of requests in single batch
 	BatchMaxLen int
 
-	// TargetUrl is RPC endpoint.
-	TargetUrl string
+	// TargetURL is RPC endpoint.
+	TargetURL string
 
 	// ExposeSMD exposes SMD schema with ?smd GET parameter.
 	ExposeSMD bool
@@ -77,8 +80,8 @@ func NewServer(opts Options) Server {
 		opts.BatchMaxLen = defaultBatchMaxLen
 	}
 
-	if opts.TargetUrl == "" {
-		opts.TargetUrl = defaultTargetUrl
+	if opts.TargetURL == "" {
+		opts.TargetURL = defaultTargetURL
 	}
 
 	return Server{
@@ -280,6 +283,50 @@ func IsArray(message json.RawMessage) bool {
 	return false
 }
 
+// ConvertToObject convert json array into object using key by index from keys array
+func ConvertToObject(keys []string, params json.RawMessage) (json.RawMessage, error) {
+	paramCount := len(keys)
+
+	rawParams := []json.RawMessage{}
+	if err := json.Unmarshal(params, &rawParams); err != nil {
+		return nil, err
+	}
+
+	if paramCount != len(rawParams) {
+		return nil, fmt.Errorf("Invalid params number, expected %d, got %d", paramCount, len(rawParams))
+	}
+
+	buf := bytes.Buffer{}
+	if _, err := buf.WriteString(`{`); err != nil {
+		return nil, err
+	}
+
+	for i, p := range rawParams {
+		// Writing key
+		if _, err := buf.WriteString(`"` + keys[i] + `":`); err != nil {
+			return nil, err
+		}
+
+		// Writing value
+		if _, err := buf.Write(p); err != nil {
+			return nil, err
+		}
+
+		// Writing trailing comma if not last argument
+		if i != paramCount-1 {
+			if _, err := buf.WriteString(`,`); err != nil {
+				return nil, err
+			}
+		}
+
+	}
+	if _, err := buf.WriteString(`}`); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
 // SMD returns Service Mapping Description object with all registered methods.
 func (s Server) SMD() smd.Schema {
 	sch := smd.Schema{
@@ -287,7 +334,7 @@ func (s Server) SMD() smd.Schema {
 		Envelope:    "JSON-RPC-2.0",
 		SMDVersion:  "2.0",
 		ContentType: contentTypeJSON,
-		Target:      s.options.TargetUrl,
+		Target:      s.options.TargetURL,
 		Services:    make(map[string]smd.Service),
 	}
 

@@ -81,8 +81,6 @@ func (as ArithService) Invoke(ctx context.Context, method string, params json.Ra
 
 	switch method {
 	case "print":
-		// generate it
-		argCount := 5
 
 		// generate it
 		var args = struct {
@@ -98,31 +96,15 @@ func (as ArithService) Invoke(ctx context.Context, method string, params json.Ra
 		}{}
 
 		if zenrpc.IsArray(params) {
+			// generate it
+			keys := []string{"str", "int", "obj", "array", "map"}
 
-			sArgs := []json.RawMessage{}
-			if err := json.Unmarshal(params, &sArgs); err != nil {
+			// TODO refactor - think how to get rid of else
+			if conv, err := zenrpc.ConvertToObject(keys, params); err != nil {
 				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			} else {
+				params = conv
 			}
-
-			if argCount != len(sArgs) {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", nil)
-			}
-
-			// generate it - arg name from json
-			m := []string{"str", "int", "obj", "array", "map"}
-
-			bs := bytes.Buffer{}
-			bs.WriteString(`{`)
-			for i, a := range sArgs {
-				bs.WriteString(`"` + m[i] + `":`)
-				bs.Write(a)
-				if i != argCount-1 {
-					bs.WriteString(`,`)
-				}
-			}
-			bs.WriteString(`}`)
-
-			params = bs.Bytes()
 		}
 
 		if err := json.Unmarshal(params, &args); err != nil {
@@ -247,7 +229,7 @@ func TestServer_ServeHTTPArray(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(rpc.ServeHTTP))
 	defer ts.Close()
 
-	out := `{"jsonrpc":"2.0","id":1,"result":"{test 1 {test nested 1.5 [1 2 3]} [el1 el2] map[key1:1 key2:2]}"}`
+	out := `{"jsonrpc":"2.0","id":1,"result":"{test 1 {test nested 1.5 [1 2 3]} [el1 el2] map[key1:1]}"}`
 	var tc = []struct {
 		in, out string
 	}{
@@ -258,7 +240,7 @@ func TestServer_ServeHTTPArray(t *testing.T) {
 				     1,
 				     {"str": "test nested", "float": 1.5, "array": [1,2,3]},
 				     ["el1", "el2"],
-				     {"key1": 1, "key2": 2}
+				     {"key1": 1}
 				   ],
 				   "id": 1 }`,
 			out: out},
@@ -269,7 +251,7 @@ func TestServer_ServeHTTPArray(t *testing.T) {
 				     "int": 1,
 				     "obj": {"str": "test nested", "float": 1.5, "array": [1,2,3]},
 				     "array": ["el1", "el2"],
-				     "map": {"key1": 1, "key2": 2}
+				     "map": {"key1": 1}
 				   },
 				   "id": 1 }`,
 			out: out},
