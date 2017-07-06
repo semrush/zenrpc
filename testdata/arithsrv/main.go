@@ -46,10 +46,10 @@ func BoxHandler(w http.ResponseWriter, r *http.Request) {
     <meta charset="UTF-8">
     <title>SMD Box</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/latest/css/bootstrap.min.css">
-<link href="https://raw.githubusercontent.com/mikhail-eremin/smd-box/master/dist/app.css" rel="stylesheet"></head>
+<link href="https://cdn.jsdelivr.net/gh/mikhail-eremin/smd-box@latest/dist/app.css" rel="stylesheet"></head>
 <body>
 <div id="json-rpc-root"></div>
-<script type="text/javascript" src="https://raw.githubusercontent.com/mikhail-eremin/smd-box/master/dist/app.js"></script></body>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/gh/mikhail-eremin/smd-box@latest/dist/app.js"></script></body>
 </html>
 	`))
 }
