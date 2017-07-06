@@ -30,7 +30,6 @@ func (s {{.Name}}) Invoke(ctx context.Context, method string, params json.RawMes
 	switch method {
 	{{range .Methods }}
 	case "{{.LowerCaseName}}":
-		// A int ` + "`json:\"a\"`" + `
 		var args = struct {
 			{{ range .Args }}
 			{{.CapitalName}} {{.Type}} ` + "`json:\"{{.JsonName}}\"`" + ` {{ end }}
@@ -39,6 +38,14 @@ func (s {{.Name}}) Invoke(ctx context.Context, method string, params json.RawMes
 		if err := json.Unmarshal(params, &args); err != nil {
 			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 		}
+
+		{{ range .DefaultValues }}
+		{{.Comment}}
+		if args.{{.CapitalName}} == nil {
+			var v {{.Type}} = {{.Value}}
+			args.{{.CapitalName}} = &v
+		}
+		{{ end }}
 
 		resp.Set(s.{{.Name}}({{if .HasContext}}ctx, {{end}} {{ range .Args }}args.{{.CapitalName}}, {{ end }}))
 	{{ end }}

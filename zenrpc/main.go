@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"go/ast"
 	"go/format"
 	"go/parser"
@@ -21,6 +22,7 @@ const (
 	contextTypeName    = "context.Context"
 	generateFileSuffix = "_zenrpc.go"
 	testFileSuffix     = "_test.go"
+	zenrpcMagicPrefix  = "//zenrpc:"
 )
 
 func main() {
@@ -33,7 +35,7 @@ func main() {
 
 	log.Printf("Entrypoint: %s", filename)
 
-	sd := packageInfo{Services: make(map[string]service)}
+	sd := packageInfo{Services: make(map[string]*service)}
 	dir, err := sd.parseFiles(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -50,7 +52,7 @@ func main() {
 // packageInfo represents struct info for XXX_zenrpc.go file generation
 type packageInfo struct {
 	PackageName string
-	Services    map[string]service
+	Services    map[string]*service
 }
 
 type service struct {
@@ -64,7 +66,16 @@ type method struct {
 	Name          string
 	LowerCaseName string
 	HasContext    bool
-	Args          []arg
+	Args          map[string]*arg
+	DefaultValues map[string]*defaultValue
+}
+
+type defaultValue struct {
+	Name        string
+	CapitalName string
+	Type        string // without star
+	Comment     string // original comment
+	Value       string
 }
 
 type arg struct {
@@ -72,6 +83,7 @@ type arg struct {
 	Type        string
 	CapitalName string
 	JsonName    string
+	Description string // from comment
 }
 
 // parseFiles parse all files associated with package from original file
@@ -142,33 +154,7 @@ func (pi *packageInfo) parseFile(filename string) error {
 	}
 
 	// get structs for zenrpc
-	for _, decl := range f.Decls {
-		gdecl, ok := decl.(*ast.GenDecl)
-		if !ok || gdecl.Tok != token.TYPE {
-			continue
-		}
-
-		for _, spec := range gdecl.Specs {
-			spec, ok := spec.(*ast.TypeSpec)
-			if !ok {
-				continue
-			}
-
-			if !ast.IsExported(spec.Name.Name) {
-				continue
-			}
-
-			structType, ok := spec.Type.(*ast.StructType)
-			if !ok {
-				continue
-			}
-
-			// check that struct is our zenrpc struct
-			if hasZenrpcComment(spec) || hasZenrpcService(structType) {
-				pi.Services[spec.Name.Name] = service{gdecl, spec.Name.Name, make(map[string]*method)}
-			}
-		}
-	}
+	pi.parseStruct(f)
 
 	// get funcs for structs
 	for _, decl := range f.Decls {
@@ -181,9 +167,11 @@ func (pi *packageInfo) parseFile(filename string) error {
 			FuncDecl:      fdecl.Type,
 			Name:          fdecl.Name.Name,
 			LowerCaseName: strings.ToLower(fdecl.Name.Name),
-			Args:          []arg{},
+			Args:          make(map[string]*arg),
+			DefaultValues: make(map[string]*defaultValue),
 		}
 
+		// add method for services
 		for _, field := range fdecl.Recv.List {
 			// field can be pointer or not
 			var ident *ast.Ident
@@ -219,24 +207,9 @@ func (pi *packageInfo) parseFile(filename string) error {
 			}
 
 			// parse type
-			typeName := ""
-			switch v := field.Type.(type) {
-			case *ast.StarExpr:
-				// pointer
-				typeName += "*" // TODO not implemented
-			case *ast.SelectorExpr:
-				// struct
-				x, ok := v.X.(*ast.Ident)
-				if ok && v.Sel != nil { // TODO check it
-					typeName = x.Name + "." + v.Sel.Name
-				} else {
-					continue
-				}
-			case *ast.Ident:
-				// basic types
-				typeName = v.Name
-			default:
-				continue
+			typeName := parseType(field.Type)
+			if typeName == "" {
+				return errors.New("Can't parse type of argument")
 			}
 
 			if typeName == contextTypeName {
@@ -246,17 +219,116 @@ func (pi *packageInfo) parseFile(filename string) error {
 
 			// parse names
 			for _, name := range field.Names {
-				method.Args = append(method.Args, arg{
+				method.Args[name.Name] = &arg{
 					Name:        name.Name,
 					Type:        typeName,
 					CapitalName: strings.Title(name.Name),
 					JsonName:    lowerFirst(name.Name),
-				})
+				}
 			}
 		}
+
+		// parse default values
+		method.parseDefaultValues(fdecl.Doc)
 	}
 
 	return nil
+}
+
+func (m *method) parseDefaultValues(doc *ast.CommentGroup) {
+	if doc == nil {
+		return
+	}
+
+	for _, comment := range doc.List {
+		if !strings.HasPrefix(comment.Text, zenrpcMagicPrefix) {
+			continue
+		}
+
+		// split by magic path and description
+		couple := strings.SplitN(comment.Text, " ", 2)
+		if len(couple) == 1 {
+			couple = strings.SplitN(comment.Text, "\t", 2)
+		}
+
+		couple[0] = strings.TrimPrefix(couple[0], zenrpcMagicPrefix)
+
+		// parse arguments
+		args := strings.Split(couple[0], ":")
+		if len(args) == 2 {
+			// default value
+			name := args[0]
+			value := args[1]
+
+			if _, ok := m.Args[name]; !ok {
+				continue
+			}
+
+			m.DefaultValues[name] = &defaultValue{
+				Name:        name,
+				CapitalName: m.Args[name].CapitalName,
+				Type:        m.Args[name].Type[1:], // remove star
+				Comment:     comment.Text,
+				Value:       value,
+			}
+
+			if len(couple) == 2 {
+				m.Args[name].Description = value
+			}
+		} else {
+			// parse error code
+		}
+	}
+}
+
+func (pi *packageInfo) parseStruct(f *ast.File) {
+	for _, decl := range f.Decls {
+		gdecl, ok := decl.(*ast.GenDecl)
+		if !ok || gdecl.Tok != token.TYPE {
+			continue
+		}
+
+		for _, spec := range gdecl.Specs {
+			spec, ok := spec.(*ast.TypeSpec)
+			if !ok {
+				continue
+			}
+
+			if !ast.IsExported(spec.Name.Name) {
+				continue
+			}
+
+			structType, ok := spec.Type.(*ast.StructType)
+			if !ok {
+				continue
+			}
+
+			// check that struct is our zenrpc struct
+			if hasZenrpcComment(spec) || hasZenrpcService(structType) {
+				pi.Services[spec.Name.Name] = &service{gdecl, spec.Name.Name, make(map[string]*method)}
+			}
+		}
+	}
+}
+
+func parseType(expr ast.Expr) string {
+	switch v := expr.(type) {
+	case *ast.StarExpr:
+		return "*" + parseType(v.X)
+	case *ast.SelectorExpr:
+		return parseType(v.X) + "." + v.Sel.Name
+	case *ast.ArrayType:
+		return "[" + parseType(v.Len) + "]" + parseType(v.Elt)
+	case *ast.MapType:
+		return "map[" + parseType(v.Key) + "]" + parseType(v.Value)
+	case *ast.Ident:
+		return v.Name
+	case *ast.BasicLit:
+		// for array size
+		return v.Value
+	default:
+		return ""
+	}
 }
 
 func hasZenrpcComment(spec *ast.TypeSpec) bool {

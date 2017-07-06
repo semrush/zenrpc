@@ -29,7 +29,13 @@ type Quotient struct {
 	Quo, Rem int
 }
 
-func (as ArithService) Divide(a, b int) (quo *Quotient, err error) {
+// Divide divides two numbers.
+//zenrpc:a			the a
+//zenrpc:b 			the b
+//zenrpc:quo		result is Quotient, should be named var
+//zenrpc:401 		we do not serve 1
+//zenrpc:-32603		divide by zero
+func (as *ArithService) Divide(a, b int) (quo *Quotient, err error) {
 	if b == 0 {
 		return nil, errors.New("divide by zero")
 	} else if b == 1 {
@@ -43,9 +49,9 @@ func (as ArithService) Divide(a, b int) (quo *Quotient, err error) {
 }
 
 // Pow returns x**y, the base-x exponential of y. If Exp is not set then default value is 2.
-//zenrpc:exp:2
-func (as ArithService) Pow(base float64, exp float64) float64 {
-	return math.Pow(base, exp)
+//zenrpc:exp:2 	exponent could be empty
+func (as *ArithService) Pow(base float64, exp *float64) float64 {
+	return math.Pow(base, *exp)
 }
 
 //go:generate zenrpc

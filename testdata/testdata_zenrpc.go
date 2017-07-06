@@ -71,7 +71,6 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 	switch method {
 
 	case "divide":
-		// A int `json:"a"`
 		var args = struct {
 			A int `json:"a"`
 			B int `json:"b"`
@@ -84,7 +83,6 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 		resp.Set(s.Divide(args.A, args.B))
 
 	case "multiply":
-		// A int `json:"a"`
 		var args = struct {
 			A int `json:"a"`
 			B int `json:"b"`
@@ -97,20 +95,24 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 		resp.Set(s.Multiply(args.A, args.B))
 
 	case "pow":
-		// A int `json:"a"`
 		var args = struct {
-			Base float64 `json:"base"`
-			Exp  float64 `json:"exp"`
+			Base float64  `json:"base"`
+			Exp  *float64 `json:"exp"`
 		}{}
 
 		if err := json.Unmarshal(params, &args); err != nil {
 			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 		}
 
+		//zenrpc:exp:2 	exponent could be empty
+		if args.Exp == nil {
+			var v float64 = 2
+			args.Exp = &v
+		}
+
 		resp.Set(s.Pow(args.Base, args.Exp))
 
 	case "sum":
-		// A int `json:"a"`
 		var args = struct {
 			A int `json:"a"`
 			B int `json:"b"`
@@ -123,7 +125,6 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 		resp.Set(s.Sum(ctx, args.A, args.B))
 
 	case "sumtest":
-		// A int `json:"a"`
 		var args = struct {
 		}{}
 
