@@ -167,9 +167,18 @@ func NewResponseError(id *json.RawMessage, code int, message string, data interf
 func (r *Response) Set(v interface{}, er ...error) {
 	r.Version = Version
 	var err error
-	// set first error if occurred
+
+	// check for nil *zenrpc.Error
+	// TODO(sergeyfast): add ability to return other error types
 	if len(er) > 0 && er[0] != nil {
 		err = er[0]
+		if e, ok := err.(*Error); ok && e == nil {
+			err = nil
+		}
+	}
+
+	// set first error if occurred
+	if err != nil {
 		if e, ok := err.(*Error); ok {
 			r.Error = e
 		} else {

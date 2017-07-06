@@ -14,11 +14,14 @@ func main() {
 	addr := flag.String("addr", "localhost:9999", "listen address")
 	flag.Parse()
 
+	const phonebook = "phonebook"
+
 	rpc := zenrpc.NewServer(zenrpc.Options{ExposeSMD: true})
+	rpc.Register(phonebook, testdata.PhoneBook{DB: testdata.People})
 	rpc.Register("arith", testdata.ArithService{})
 	rpc.Register("", testdata.ArithService{}) // public
 	rpc.Use(zenrpc.Logger(log.New(os.Stderr, "", log.LstdFlags)))
-	rpc.Use(zenrpc.Metrics(""))
+	rpc.Use(zenrpc.Metrics(""), testdata.SerialPeopleAccess(phonebook))
 
 	http.Handle("/", rpc)
 	http.Handle("/metrics", promhttp.Handler())
