@@ -36,7 +36,17 @@ var RPC = struct {
 
 {{ range $s := .Services}}
 func ({{.Name}}) SMD() smd.ServiceInfo {
-	return smd.ServiceInfo{}
+	return smd.ServiceInfo{
+		Description: ` + "`{{.Description}}`" + `,
+		Methods: map[string]smd.Service{ {{ range .Methods }}
+			"{{.Name}}": {
+				Description: ` + "`{{.Description}}`" + `,
+				Parameters: []smd.JSONSchema{ {{ range .Args }}
+					{Name: "{{.Name}}", Optional: {{.HasStar}}, Description: ` + "`{{.Description}}`" + `, Type: smd.{{.SMDType}}}, {{ end }}
+				},
+			}, {{ end }}
+		},
+	}
 }
 
 // Invoke is as generated code from zenrpc cmd

@@ -61,9 +61,10 @@ type packageInfo struct {
 }
 
 type service struct {
-	GenDecl *ast.GenDecl
-	Name    string
-	Methods map[string]*method
+	GenDecl     *ast.GenDecl
+	Name        string
+	Methods     map[string]*method
+	Description string
 }
 
 type method struct {
@@ -73,6 +74,7 @@ type method struct {
 	HasContext    bool
 	Args          map[string]*arg
 	DefaultValues map[string]*defaultValue
+	Description   string
 }
 
 type defaultValue struct {
@@ -88,7 +90,9 @@ type arg struct {
 	Type        string
 	CapitalName string
 	JsonName    string
-	Description string // from comment
+	HasStar     bool
+	Description string // from magic comment
+	SMDType     string
 }
 
 // parseFiles parse all files associated with package from original file
@@ -173,7 +177,12 @@ func (pi *packageInfo) parseServices(f *ast.File) {
 
 			// check that struct is our zenrpc struct
 			if hasZenrpcComment(spec) || hasZenrpcService(structType) {
-				pi.Services[spec.Name.Name] = &service{gdecl, spec.Name.Name, make(map[string]*method)}
+				pi.Services[spec.Name.Name] = &service{
+					GenDecl:     gdecl,
+					Name:        spec.Name.Name,
+					Methods:     make(map[string]*method),
+					Description: parseCommentGroup(spec.Doc),
+				}
 			}
 		}
 	}
@@ -192,6 +201,7 @@ func (pi *packageInfo) parseMethods(f *ast.File) error {
 			LowerCaseName: strings.ToLower(fdecl.Name.Name),
 			Args:          make(map[string]*arg),
 			DefaultValues: make(map[string]*defaultValue),
+			Description:   parseCommentGroup(fdecl.Doc),
 		}
 
 		m.linkWithServices(pi, fdecl)
@@ -206,7 +216,7 @@ func (pi *packageInfo) parseMethods(f *ast.File) error {
 		}
 
 		// parse default values
-		m.parseDefaultValues(fdecl.Doc)
+		m.parseComments(fdecl.Doc)
 	}
 
 	return nil
@@ -281,6 +291,9 @@ func (m *method) parseArguments(fdecl *ast.FuncDecl) error {
 			continue // not add context to arg list
 		}
 
+		hasStar := hasStar(typeName) // check for pointer
+		smdType := parseSMDType(field.Type)
+
 		// parse names
 		for _, name := range field.Names {
 			m.Args[name.Name] = &arg{
@@ -288,6 +301,8 @@ func (m *method) parseArguments(fdecl *ast.FuncDecl) error {
 				Type:        typeName,
 				CapitalName: strings.Title(name.Name),
 				JsonName:    lowerFirst(name.Name),
+				HasStar:     hasStar,
+				SMDType:     smdType,
 			}
 		}
 	}
@@ -295,7 +310,9 @@ func (m *method) parseArguments(fdecl *ast.FuncDecl) error {
 	return nil
 }
 
-func (m *method) parseDefaultValues(doc *ast.CommentGroup) {
+// parseComments parse method comments and
+// fill default values, description for params and user errors map
+func (m *method) parseComments(doc *ast.CommentGroup) {
 	if doc == nil {
 		return
 	}
@@ -341,6 +358,26 @@ func (m *method) parseDefaultValues(doc *ast.CommentGroup) {
 	}
 }
 
+func parseCommentGroup(doc *ast.CommentGroup) string {
+	if doc == nil {
+		return ""
+	}
+
+	result := ""
+	for _, comment := range doc.List {
+		if strings.HasPrefix(comment.Text, zenrpcMagicPrefix) {
+			continue
+		}
+
+		if len(result) > 0 {
+			result += "\n"
+		}
+		result += strings.TrimSpace(strings.TrimPrefix(comment.Text, "//"))
+	}
+
+	return result
+}
+
 func parseType(expr ast.Expr) string {
 	switch v := expr.(type) {
 	case *ast.StarExpr:
@@ -358,6 +395,32 @@ func parseType(expr ast.Expr) string {
 		return v.Value
 	default:
 		return ""
+	}
+}
+
+func parseSMDType(expr ast.Expr) string {
+	switch v := expr.(type) {
+	case *ast.StarExpr:
+		return parseSMDType(v.X)
+	case *ast.SelectorExpr, *ast.MapType:
+		return "Object"
+	case *ast.ArrayType:
+		return "Array"
+	case *ast.Ident:
+		switch v.Name {
+		case "bool":
+			return "Boolean"
+		case "string":
+			return "String"
+		case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64", "uintptr", "byte", "rune":
+			return "Integer"
+		case "float32", "float64", "complex64", "complex128":
+			return "Float"
+		default:
+			return "Object" // *ast.Ident contain type name, if type not basic then it struct or alias
+		}
+	default:
+		return "Object" // default complex type is object
 	}
 }
 
@@ -395,4 +458,12 @@ func lowerFirst(s string) string {
 	}
 	r, n := utf8.DecodeRuneInString(s)
 	return string(unicode.ToLower(r)) + s[n:]
+}
+
+func hasStar(s string) bool {
+	if s[:1] == "*" {
+		return true
+	}
+
+	return false
 }
