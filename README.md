@@ -104,14 +104,14 @@ All comments are optional.
 
 # JSON-RPC 2.0 Supported Features
 
-  * [ ] Requests
+  * [x] Requests
     * [x] Single requests
     * [x] Batch requests
     * [x] Notifications
   * [ ] Parameters
     * [x] Named
     * [ ] Position
-    * [ ] Default values
+    * [x] Default values
   * [ ] SMD Schema
     * [ ] Input
     * [ ] Output
@@ -120,15 +120,15 @@ All comments are optional.
 
 # Server Library Features
 
- * [ ] go generate
+ * [x] go generate
  * [ ] Transports
    * [x] HTTP
    * [ ] Websocket
    * [ ] RabbitMQ
- * [ ] Server middleware
-   * [ ] Basic support
-   * [ ] Metrics
-   * [ ] Logging
+ * [x] Server middleware
+   * [x] Basic support
+   * [x] Metrics
+   * [x] Logging
 
 # License
 

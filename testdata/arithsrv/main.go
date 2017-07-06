@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sergeyfast/zenrpc"
 	"github.com/sergeyfast/zenrpc/testdata"
 	"log"
@@ -17,8 +18,10 @@ func main() {
 	rpc.Register("arith", testdata.ArithService{})
 	rpc.Register("", testdata.ArithService{}) // public
 	rpc.Use(zenrpc.Logger(log.New(os.Stderr, "", log.LstdFlags)))
+	rpc.Use(zenrpc.Metrics(""))
 
 	http.Handle("/", rpc)
+	http.Handle("/metrics", promhttp.Handler())
 
 	log.Printf("starting arithsrv on %s", *addr)
 	log.Fatal(http.ListenAndServe(*addr, nil))
