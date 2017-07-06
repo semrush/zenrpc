@@ -101,7 +101,7 @@ func (s *Server) Register(namespace string, service Invoker) {
 func (s *Server) process(ctx context.Context, message json.RawMessage) interface{} {
 	requests := []Request{}
 	// parsing batch requests
-	batch := isBatch(message)
+	batch := IsArray(message)
 
 	// making not batch request looks like batch to simplify further code
 	if !batch {
@@ -264,8 +264,8 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-// isBatch checks json message if it array or object
-func isBatch(message json.RawMessage) bool {
+// IsArray checks json message if it array or object
+func IsArray(message json.RawMessage) bool {
 	for _, b := range message {
 		if unicode.IsSpace(rune(b)) {
 			continue

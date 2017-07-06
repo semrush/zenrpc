@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"fmt"
 	"github.com/sergeyfast/zenrpc"
 	"github.com/sergeyfast/zenrpc/smd"
 )
@@ -79,6 +80,57 @@ func (as ArithService) Invoke(ctx context.Context, method string, params json.Ra
 	resp := zenrpc.Response{}
 
 	switch method {
+	case "print":
+		// generate it
+		argCount := 5
+
+		// generate it
+		var args = struct {
+			Str string `json:"str"`
+			Int int    `json:"int"`
+			Obj struct {
+				Str   string  `json:"str"`
+				Float float32 `json:"float"`
+				Array []int   `json:"array"`
+			} `json:"obj"`
+			Array []string       `json:"array"`
+			Map   map[string]int `json:"map"`
+		}{}
+
+		if zenrpc.IsArray(params) {
+
+			sArgs := []json.RawMessage{}
+			if err := json.Unmarshal(params, &sArgs); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+
+			if argCount != len(sArgs) {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", nil)
+			}
+
+			// generate it - arg name from json
+			m := []string{"str", "int", "obj", "array", "map"}
+
+			bs := bytes.Buffer{}
+			bs.WriteString(`{`)
+			for i, a := range sArgs {
+				bs.WriteString(`"` + m[i] + `":`)
+				bs.Write(a)
+				if i != argCount-1 {
+					bs.WriteString(`,`)
+				}
+			}
+			bs.WriteString(`}`)
+
+			params = bs.Bytes()
+		}
+
+		if err := json.Unmarshal(params, &args); err != nil {
+			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		}
+
+		// todo set default values
+		resp.Set(fmt.Sprintf("%v", args))
 	case "divide":
 		var args = struct {
 			A int `json:"a"`
@@ -189,6 +241,56 @@ func init() {
 	rpc.Register("arith", &ArithService{})
 	rpc.Register("", &ArithService{})
 	//rpc.Use(zenrpc.Logger(log.New(os.Stderr, "", log.LstdFlags)))
+}
+
+func TestServer_ServeHTTPArray(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(rpc.ServeHTTP))
+	defer ts.Close()
+
+	out := `{"jsonrpc":"2.0","id":1,"result":"{test 1 {test nested 1.5 [1 2 3]} [el1 el2] map[key1:1 key2:2]}"}`
+	var tc = []struct {
+		in, out string
+	}{
+		{
+			in: `{"jsonrpc": "2.0", "method": "arith.print",
+				   "params": [
+				     "test",
+				     1,
+				     {"str": "test nested", "float": 1.5, "array": [1,2,3]},
+				     ["el1", "el2"],
+				     {"key1": 1, "key2": 2}
+				   ],
+				   "id": 1 }`,
+			out: out},
+		{
+			in: `{"jsonrpc": "2.0", "method": "arith.print",
+				   "params": {
+				     "str": "test",
+				     "int": 1,
+				     "obj": {"str": "test nested", "float": 1.5, "array": [1,2,3]},
+				     "array": ["el1", "el2"],
+				     "map": {"key1": 1, "key2": 2}
+				   },
+				   "id": 1 }`,
+			out: out},
+	}
+
+	for _, c := range tc {
+		res, err := http.Post(ts.URL, "application/json", bytes.NewBufferString(c.in))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		resp, err := ioutil.ReadAll(res.Body)
+		res.Body.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if string(resp) != c.out {
+			t.Errorf("Input: %s\n got %s expected %s", c.in, resp, c.out)
+		}
+	}
 }
 
 func TestServer_ServeHTTP(t *testing.T) {
