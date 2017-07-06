@@ -108,12 +108,12 @@ All comments are optional.
     * [x] Single requests
     * [x] Batch requests
     * [x] Notifications
-  * [ ] Parameters
+  * [x] Parameters
     * [x] Named
-    * [ ] Position
+    * [x] Position
     * [x] Default values
-  * [ ] SMD Schema
-    * [ ] Input
+  * [x] SMD Schema
+    * [x] Input
     * [ ] Output
     * [ ] Codes
     * [ ] Scopes for OAuth
