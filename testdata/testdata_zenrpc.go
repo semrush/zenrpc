@@ -10,6 +10,34 @@ import (
 	"github.com/sergeyfast/zenrpc/smd"
 )
 
+var RPC = struct {
+	ArithService struct {
+		Divide   string
+		Multiply string
+		Positive string
+		Pow      string
+		Sum      string
+		SumArray string
+	}
+}{
+	ArithService: struct {
+		Divide   string
+		Multiply string
+		Positive string
+		Pow      string
+		Sum      string
+		SumArray string
+	}{
+
+		Divide:   "divide",
+		Multiply: "multiply",
+		Positive: "positive",
+		Pow:      "pow",
+		Sum:      "sum",
+		SumArray: "sumarray",
+	},
+}
+
 func (ArithService) SMD() smd.ServiceInfo {
 	return smd.ServiceInfo{
 		Description: "",
@@ -70,7 +98,7 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 	switch method {
 
-	case "divide":
+	case RPC.ArithService.Divide:
 		var args = struct {
 			A int `json:"a"`
 			B int `json:"b"`
@@ -82,7 +110,7 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 		resp.Set(s.Divide(args.A, args.B))
 
-	case "multiply":
+	case RPC.ArithService.Multiply:
 		var args = struct {
 			A int `json:"a"`
 			B int `json:"b"`
@@ -94,7 +122,7 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 		resp.Set(s.Multiply(args.A, args.B))
 
-	case "positive":
+	case RPC.ArithService.Positive:
 		var args = struct {
 		}{}
 
@@ -104,7 +132,7 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 		resp.Set(s.Positive())
 
-	case "pow":
+	case RPC.ArithService.Pow:
 		var args = struct {
 			Base float64  `json:"base"`
 			Exp  *float64 `json:"exp"`
@@ -122,7 +150,7 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 		resp.Set(s.Pow(args.Base, args.Exp))
 
-	case "sum":
+	case RPC.ArithService.Sum:
 		var args = struct {
 			A int `json:"a"`
 			B int `json:"b"`
@@ -134,7 +162,7 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 		resp.Set(s.Sum(ctx, args.A, args.B))
 
-	case "sumarray":
+	case RPC.ArithService.SumArray:
 		var args = struct {
 			Array *[]float64 `json:"array"`
 		}{}

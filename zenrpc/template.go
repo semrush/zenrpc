@@ -18,7 +18,23 @@ import (
 	"github.com/sergeyfast/zenrpc/smd"
 )
 
+var RPC = struct {
 {{ range .Services}}
+	{{.Name}} struct { {{range .Methods }}
+		{{.Name}} string {{ end }}
+	}
+{{ end }}
+}{	{{ range .Services}}
+		{{.Name}}: struct { {{range .Methods }}
+			{{.Name}} string {{ end }}
+		}{
+		{{range .Methods }}
+			{{.Name}}:   "{{.LowerCaseName}}",{{ end }}
+		},
+	{{ end }}
+}
+
+{{ range $s := .Services}}
 func ({{.Name}}) SMD() smd.ServiceInfo {
 	return smd.ServiceInfo{}
 }
@@ -29,7 +45,7 @@ func (s {{.Name}}) Invoke(ctx context.Context, method string, params json.RawMes
 
 	switch method {
 	{{range .Methods }}
-	case "{{.LowerCaseName}}":
+	case RPC.{{$s.Name}}.{{.Name}}:
 		var args = struct {
 			{{ range .Args }}
 			{{.CapitalName}} {{.Type}} ` + "`json:\"{{.JsonName}}\"`" + ` {{ end }}
