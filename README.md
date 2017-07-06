@@ -1,6 +1,6 @@
 # zenrpc: JSON-RPC 2.0 Server Implementation with SMD support [WIP]
 
-[![goreport](https://goreportcard.com/badge/github.com/sergeyfast/zenrpc)](https://goreportcard.com/report/github.com/sergeyfast/zenrpc)
+[![goreport](https://goreportcard.com/badge/github.com/sergeyfast/zenrpc)](https://goreportcard.com/report/github.com/sergeyfast/zenrpc) [![Build Status](https://travis-ci.org/sergeyfast/zenrpc.svg?branch=master)](https://travis-ci.org/sergeyfast/zenrpc)
 
 `zenrpc` is a JSON-RPC 2.0 server library with Service Mapping Description support. 
 It's built on top of `go generate` instead of reflection. 
