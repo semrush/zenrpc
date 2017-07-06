@@ -16,7 +16,7 @@ func (as ArithService) Sum(ctx context.Context, a, b int) (bool, *zenrpc.Error) 
 	return true, zenrpc.NewStringError(a+b, r.Host)
 }
 
-func (as ArithService) SumTest() (bool, *zenrpc.Error) {
+func (as ArithService) Positive() (bool, *zenrpc.Error) {
 	return true, nil
 }
 
@@ -52,6 +52,17 @@ func (as *ArithService) Divide(a, b int) (quo *Quotient, err error) {
 //zenrpc:exp:2 	exponent could be empty
 func (as *ArithService) Pow(base float64, exp *float64) float64 {
 	return math.Pow(base, *exp)
+}
+
+// SumArray returns sum all items from array
+//zenrpc:array:[]float64{1,2,4}
+func (as *ArithService) SumArray(array *[]float64) float64 {
+	var sum float64
+
+	for _, i := range *array {
+		sum += i
+	}
+	return sum
 }
 
 //go:generate zenrpc

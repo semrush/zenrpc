@@ -94,6 +94,16 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 		resp.Set(s.Multiply(args.A, args.B))
 
+	case "positive":
+		var args = struct {
+		}{}
+
+		if err := json.Unmarshal(params, &args); err != nil {
+			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		}
+
+		resp.Set(s.Positive())
+
 	case "pow":
 		var args = struct {
 			Base float64  `json:"base"`
@@ -124,15 +134,22 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 		resp.Set(s.Sum(ctx, args.A, args.B))
 
-	case "sumtest":
+	case "sumarray":
 		var args = struct {
+			Array *[]float64 `json:"array"`
 		}{}
 
 		if err := json.Unmarshal(params, &args); err != nil {
 			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 		}
 
-		resp.Set(s.SumTest())
+		//zenrpc:array:[]float64{1,2,4}
+		if args.Array == nil {
+			var v []float64 = []float64{1, 2, 4}
+			args.Array = &v
+		}
+
+		resp.Set(s.SumArray(args.Array))
 
 	default:
 		resp = zenrpc.NewResponseError(nil, zenrpc.MethodNotFound, "", nil)
