@@ -20,18 +20,11 @@ import (
 
 var RPC = struct {
 {{ range .Services}}
-	{{.Name}} struct { {{range .Methods }}
-		{{.Name}} string {{ end }}
-	}
-{{ end }}
+	{{.Name}} struct { {{range $i, $e := .Methods }}{{if $i}}, {{end}}{{.Name}}{{ end }} string } {{ end }}
 }{	{{ range .Services}}
-		{{.Name}}: struct { {{range .Methods }}
-			{{.Name}} string {{ end }}
-		}{
-		{{range .Methods }}
+		{{.Name}}: struct { {{range $i, $e := .Methods }} {{if $i}}, {{end}}{{.Name}}{{ end }} string }{ {{range .Methods }}
 			{{.Name}}:   "{{.LowerCaseName}}",{{ end }}
-		},
-	{{ end }}
+		}, 	{{ end }}
 }
 
 {{ range $s := .Services}}
@@ -53,8 +46,7 @@ func ({{.Name}}) SMD() smd.ServiceInfo {
 func (s {{.Name}}) Invoke(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
 	resp := zenrpc.Response{}
 
-	switch method {
-	{{range .Methods }}
+	switch method { {{range .Methods }}
 	case RPC.{{$s.Name}}.{{.Name}}:
 		var args = struct {
 			{{ range .Args }}
@@ -73,8 +65,7 @@ func (s {{.Name}}) Invoke(ctx context.Context, method string, params json.RawMes
 		}
 		{{ end }}
 
-		resp.Set(s.{{.Name}}({{if .HasContext}}ctx, {{end}} {{ range .Args }}args.{{.CapitalName}}, {{ end }}))
-	{{ end }}
+		resp.Set(s.{{.Name}}({{if .HasContext}}ctx, {{end}} {{ range .Args }}args.{{.CapitalName}}, {{ end }})) {{ end }}
 	default:
 		resp = zenrpc.NewResponseError(nil, zenrpc.MethodNotFound, "", nil)
 	}

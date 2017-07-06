@@ -11,61 +11,71 @@ import (
 )
 
 var RPC = struct {
-	ArithService struct {
-		Divide   string
-		Multiply string
-		Positive string
-		Pow      string
-		Sum      string
-		SumArray string
-	}
-
-	PhoneBook struct {
-		ById           string
-		Delete         string
-		Get            string
-		Remove         string
-		Save           string
-		ValidateSearch string
-	}
+	ArithService struct{ Sum, Positive, Multiply, Divide, Pow, SumArray string }
+	PhoneBook    struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }
 }{
-	ArithService: struct {
-		Divide   string
-		Multiply string
-		Positive string
-		Pow      string
-		Sum      string
-		SumArray string
-	}{
-
-		Divide:   "divide",
-		Multiply: "multiply",
-		Positive: "positive",
-		Pow:      "pow",
+	ArithService: struct{ Sum, Positive, Multiply, Divide, Pow, SumArray string }{
 		Sum:      "sum",
+		Positive: "positive",
+		Multiply: "multiply",
+		Divide:   "divide",
+		Pow:      "pow",
 		SumArray: "sumarray",
 	},
-
-	PhoneBook: struct {
-		ById           string
-		Delete         string
-		Get            string
-		Remove         string
-		Save           string
-		ValidateSearch string
-	}{
-
+	PhoneBook: struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }{
+		Get:            "get",
+		ValidateSearch: "validatesearch",
 		ById:           "byid",
 		Delete:         "delete",
-		Get:            "get",
 		Remove:         "remove",
 		Save:           "save",
-		ValidateSearch: "validatesearch",
 	},
 }
 
 func (ArithService) SMD() smd.ServiceInfo {
-	return smd.ServiceInfo{}
+	return smd.ServiceInfo{
+		Description: ``,
+		Methods: map[string]smd.Service{
+			"Sum": {
+				Description: `Sum sums two digits and returns error with error code as result and IP from context.`,
+				Parameters: []smd.JSONSchema{
+					{Name: "a", Optional: false, Description: ``, Type: smd.Integer},
+					{Name: "b", Optional: false, Description: ``, Type: smd.Integer},
+				},
+			},
+			"Positive": {
+				Description: ``,
+				Parameters:  []smd.JSONSchema{},
+			},
+			"Multiply": {
+				Description: `Multiply multiples two digits and returns result.`,
+				Parameters: []smd.JSONSchema{
+					{Name: "a", Optional: false, Description: ``, Type: smd.Integer},
+					{Name: "b", Optional: false, Description: ``, Type: smd.Integer},
+				},
+			},
+			"Divide": {
+				Description: `Divide divides two numbers.`,
+				Parameters: []smd.JSONSchema{
+					{Name: "a", Optional: false, Description: ``, Type: smd.Integer},
+					{Name: "b", Optional: false, Description: ``, Type: smd.Integer},
+				},
+			},
+			"Pow": {
+				Description: `Pow returns x**y, the base-x exponential of y. If Exp is not set then default value is 2.`,
+				Parameters: []smd.JSONSchema{
+					{Name: "base", Optional: false, Description: ``, Type: smd.Float},
+					{Name: "exp", Optional: true, Description: `exponent could be empty`, Type: smd.Float},
+				},
+			},
+			"SumArray": {
+				Description: `SumArray returns sum all items from array`,
+				Parameters: []smd.JSONSchema{
+					{Name: "array", Optional: true, Description: ``, Type: smd.Array},
+				},
+			},
+		},
+	}
 }
 
 // Invoke is as generated code from zenrpc cmd
@@ -73,8 +83,7 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 	resp := zenrpc.Response{}
 
 	switch method {
-
-	case RPC.ArithService.Divide:
+	case RPC.ArithService.Sum:
 		var args = struct {
 			A int `json:"a"`
 			B int `json:"b"`
@@ -84,8 +93,16 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 		}
 
-		resp.Set(s.Divide(args.A, args.B))
+		resp.Set(s.Sum(ctx, args.A, args.B))
+	case RPC.ArithService.Positive:
+		var args = struct {
+		}{}
 
+		if err := json.Unmarshal(params, &args); err != nil {
+			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		}
+
+		resp.Set(s.Positive())
 	case RPC.ArithService.Multiply:
 		var args = struct {
 			A int `json:"a"`
@@ -97,17 +114,17 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 		}
 
 		resp.Set(s.Multiply(args.A, args.B))
-
-	case RPC.ArithService.Positive:
+	case RPC.ArithService.Divide:
 		var args = struct {
+			A int `json:"a"`
+			B int `json:"b"`
 		}{}
 
 		if err := json.Unmarshal(params, &args); err != nil {
 			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 		}
 
-		resp.Set(s.Positive())
-
+		resp.Set(s.Divide(args.A, args.B))
 	case RPC.ArithService.Pow:
 		var args = struct {
 			Base float64  `json:"base"`
@@ -125,19 +142,6 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 		}
 
 		resp.Set(s.Pow(args.Base, args.Exp))
-
-	case RPC.ArithService.Sum:
-		var args = struct {
-			A int `json:"a"`
-			B int `json:"b"`
-		}{}
-
-		if err := json.Unmarshal(params, &args); err != nil {
-			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
-		}
-
-		resp.Set(s.Sum(ctx, args.A, args.B))
-
 	case RPC.ArithService.SumArray:
 		var args = struct {
 			Array *[]float64 `json:"array"`
@@ -154,7 +158,6 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 		}
 
 		resp.Set(s.SumArray(args.Array))
-
 	default:
 		resp = zenrpc.NewResponseError(nil, zenrpc.MethodNotFound, "", nil)
 	}
@@ -163,7 +166,50 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 }
 
 func (PhoneBook) SMD() smd.ServiceInfo {
-	return smd.ServiceInfo{}
+	return smd.ServiceInfo{
+		Description: ``,
+		Methods: map[string]smd.Service{
+			"Get": {
+				Description: `Get returns all people from DB.`,
+				Parameters: []smd.JSONSchema{
+					{Name: "search", Optional: false, Description: ``, Type: smd.Object},
+					{Name: "page", Optional: true, Description: `current page`, Type: smd.Integer},
+					{Name: "count", Optional: true, Description: `page size`, Type: smd.Integer},
+				},
+			},
+			"ValidateSearch": {
+				Description: `ValidateSearch returns given search as result.`,
+				Parameters: []smd.JSONSchema{
+					{Name: "search", Optional: true, Description: ``, Type: smd.Object},
+				},
+			},
+			"ById": {
+				Description: `ById returns Person from DB.`,
+				Parameters: []smd.JSONSchema{
+					{Name: "id", Optional: false, Description: ``, Type: smd.Integer},
+				},
+			},
+			"Delete": {
+				Description: `Delete marks person as deleted.`,
+				Parameters: []smd.JSONSchema{
+					{Name: "id", Optional: false, Description: ``, Type: smd.Integer},
+				},
+			},
+			"Remove": {
+				Description: `Removes deletes person from DB.`,
+				Parameters: []smd.JSONSchema{
+					{Name: "id", Optional: false, Description: ``, Type: smd.Integer},
+				},
+			},
+			"Save": {
+				Description: `Save saves person to DB.`,
+				Parameters: []smd.JSONSchema{
+					{Name: "p", Optional: false, Description: ``, Type: smd.Object},
+					{Name: "replace", Optional: true, Description: `update person if exist`, Type: smd.Boolean},
+				},
+			},
+		},
+	}
 }
 
 // Invoke is as generated code from zenrpc cmd
@@ -171,7 +217,40 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 	resp := zenrpc.Response{}
 
 	switch method {
+	case RPC.PhoneBook.Get:
+		var args = struct {
+			Search PersonSearch `json:"search"`
+			Page   *int         `json:"page"`
+			Count  *int         `json:"count"`
+		}{}
 
+		if err := json.Unmarshal(params, &args); err != nil {
+			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		}
+
+		//zenrpc:page:0 current page
+		if args.Page == nil {
+			var v int = 0
+			args.Page = &v
+		}
+
+		//zenrpc:count:50 page size
+		if args.Count == nil {
+			var v int = 50
+			args.Count = &v
+		}
+
+		resp.Set(s.Get(args.Search, args.Page, args.Count))
+	case RPC.PhoneBook.ValidateSearch:
+		var args = struct {
+			Search *PersonSearch `json:"search"`
+		}{}
+
+		if err := json.Unmarshal(params, &args); err != nil {
+			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		}
+
+		resp.Set(s.ValidateSearch(args.Search))
 	case RPC.PhoneBook.ById:
 		var args = struct {
 			Id uint64 `json:"id"`
@@ -182,7 +261,6 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 		}
 
 		resp.Set(s.ById(args.Id))
-
 	case RPC.PhoneBook.Delete:
 		var args = struct {
 			Id uint64 `json:"id"`
@@ -193,32 +271,6 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 		}
 
 		resp.Set(s.Delete(args.Id))
-
-	case RPC.PhoneBook.Get:
-		var args = struct {
-			Count  *int         `json:"count"`
-			Page   *int         `json:"page"`
-			Search PersonSearch `json:"search"`
-		}{}
-
-		if err := json.Unmarshal(params, &args); err != nil {
-			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
-		}
-
-		//zenrpc:count:50 page size
-		if args.Count == nil {
-			var v int = 50
-			args.Count = &v
-		}
-
-		//zenrpc:page:0 current page
-		if args.Page == nil {
-			var v int = 0
-			args.Page = &v
-		}
-
-		resp.Set(s.Get(args.Search, args.Page, args.Count))
-
 	case RPC.PhoneBook.Remove:
 		var args = struct {
 			Id uint64 `json:"id"`
@@ -229,7 +281,6 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 		}
 
 		resp.Set(s.Remove(args.Id))
-
 	case RPC.PhoneBook.Save:
 		var args = struct {
 			P       Person `json:"p"`
@@ -247,18 +298,6 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 		}
 
 		resp.Set(s.Save(args.P, args.Replace))
-
-	case RPC.PhoneBook.ValidateSearch:
-		var args = struct {
-			Search *PersonSearch `json:"search"`
-		}{}
-
-		if err := json.Unmarshal(params, &args); err != nil {
-			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
-		}
-
-		resp.Set(s.ValidateSearch(args.Search))
-
 	default:
 		resp = zenrpc.NewResponseError(nil, zenrpc.MethodNotFound, "", nil)
 	}

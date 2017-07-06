@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -35,18 +36,18 @@ func main() {
 
 	log.Printf("Entrypoint: %s", filename)
 
-	sd := packageInfo{Services: make(map[string]*service)}
-	dir, err := sd.parseFiles(filename)
+	pi := packageInfo{Services: []*service{}, Errors: make(map[int]string)}
+	dir, err := pi.parseFiles(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if len(sd.Services) == 0 {
+	if len(pi.Services) == 0 {
 		log.Printf("Services not found")
 		return
 	}
 
-	outputFileName, err := sd.generateFile(dir)
+	outputFileName, err := pi.generateFile(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -57,13 +58,14 @@ func main() {
 // packageInfo represents struct info for XXX_zenrpc.go file generation
 type packageInfo struct {
 	PackageName string
-	Services    map[string]*service
+	Services    []*service
+	Errors      map[int]string // errors map for documentation in SMD
 }
 
 type service struct {
 	GenDecl     *ast.GenDecl
 	Name        string
-	Methods     map[string]*method
+	Methods     []*method
 	Description string
 }
 
@@ -72,8 +74,8 @@ type method struct {
 	Name          string
 	LowerCaseName string
 	HasContext    bool
-	Args          map[string]*arg
-	DefaultValues map[string]*defaultValue
+	Args          []*arg
+	DefaultValues []*defaultValue
 	Description   string
 }
 
@@ -134,7 +136,7 @@ func (pi *packageInfo) parseFile(filename string) error {
 	if err != nil {
 		return err
 	}
-	//ast.Print(fset, f) // TODO remove
+	//ast.Print(fset, f) // for debug
 
 	if len(pi.PackageName) == 0 {
 		pi.PackageName = f.Name.Name
@@ -177,12 +179,12 @@ func (pi *packageInfo) parseServices(f *ast.File) {
 
 			// check that struct is our zenrpc struct
 			if hasZenrpcComment(spec) || hasZenrpcService(structType) {
-				pi.Services[spec.Name.Name] = &service{
+				pi.Services = append(pi.Services, &service{
 					GenDecl:     gdecl,
 					Name:        spec.Name.Name,
-					Methods:     make(map[string]*method),
+					Methods:     []*method{},
 					Description: parseCommentGroup(spec.Doc),
-				}
+				})
 			}
 		}
 	}
@@ -199,8 +201,8 @@ func (pi *packageInfo) parseMethods(f *ast.File) error {
 			FuncDecl:      fdecl.Type,
 			Name:          fdecl.Name.Name,
 			LowerCaseName: strings.ToLower(fdecl.Name.Name),
-			Args:          make(map[string]*arg),
-			DefaultValues: make(map[string]*defaultValue),
+			Args:          []*arg{},
+			DefaultValues: []*defaultValue{},
 			Description:   parseCommentGroup(fdecl.Doc),
 		}
 
@@ -216,7 +218,7 @@ func (pi *packageInfo) parseMethods(f *ast.File) error {
 		}
 
 		// parse default values
-		m.parseComments(fdecl.Doc)
+		m.parseComments(fdecl.Doc, pi)
 	}
 
 	return nil
@@ -260,17 +262,18 @@ func (m *method) linkWithServices(pi *packageInfo, fdecl *ast.FuncDecl) {
 			continue
 		}
 
-		// find service in our service list
-		// method can be in several services
-		if _, ok := pi.Services[ident.Name]; !ok {
-			continue
-		}
-
 		if !ast.IsExported(fdecl.Name.Name) {
 			continue
 		}
 
-		pi.Services[ident.Name].Methods[fdecl.Name.Name] = m
+		// find service in our service list
+		// method can be in several services
+		for _, s := range pi.Services {
+			if s.Name == ident.Name {
+				s.Methods = append(s.Methods, m)
+				break
+			}
+		}
 	}
 }
 
@@ -296,14 +299,14 @@ func (m *method) parseArguments(fdecl *ast.FuncDecl) error {
 
 		// parse names
 		for _, name := range field.Names {
-			m.Args[name.Name] = &arg{
+			m.Args = append(m.Args, &arg{
 				Name:        name.Name,
 				Type:        typeName,
 				CapitalName: strings.Title(name.Name),
 				JsonName:    lowerFirst(name.Name),
 				HasStar:     hasStar,
 				SMDType:     smdType,
-			}
+			})
 		}
 	}
 
@@ -312,7 +315,7 @@ func (m *method) parseArguments(fdecl *ast.FuncDecl) error {
 
 // parseComments parse method comments and
 // fill default values, description for params and user errors map
-func (m *method) parseComments(doc *ast.CommentGroup) {
+func (m *method) parseComments(doc *ast.CommentGroup, pi *packageInfo) {
 	if doc == nil {
 		return
 	}
@@ -337,23 +340,27 @@ func (m *method) parseComments(doc *ast.CommentGroup) {
 			name := args[0]
 			value := args[1]
 
-			if _, ok := m.Args[name]; !ok {
-				continue
-			}
+			for _, a := range m.Args {
+				if a.Name == name {
+					m.DefaultValues = append(m.DefaultValues, &defaultValue{
+						Name:        name,
+						CapitalName: a.CapitalName,
+						Type:        a.Type[1:], // remove star
+						Comment:     comment.Text,
+						Value:       value,
+					})
 
-			m.DefaultValues[name] = &defaultValue{
-				Name:        name,
-				CapitalName: m.Args[name].CapitalName,
-				Type:        m.Args[name].Type[1:], // remove star
-				Comment:     comment.Text,
-				Value:       value,
-			}
+					if len(couple) == 2 {
+						a.Description = strings.TrimSpace(couple[1])
+					}
 
-			if len(couple) == 2 {
-				m.Args[name].Description = strings.TrimSpace(couple[1])
+					break
+				}
 			}
-		} else {
-			// parse error code
+		} else if i, err := strconv.Atoi(args[0]); err == nil && len(couple) == 2 {
+			// add error code
+			// example: //zenrpc:-32603		divide by zero
+			pi.Errors[i] = strings.TrimSpace(couple[1])
 		}
 	}
 }
