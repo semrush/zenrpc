@@ -5,32 +5,32 @@ import (
 )
 
 const (
-	// ParseError is error code defined by JSON-RPC 2.0 spec
+	// ParseError is error code defined by JSON-RPC 2.0 spec.
 	// Invalid JSON was received by the server.
 	// An error occurred on the server while parsing the JSON text.
 	ParseError = -32700
 
-	// InvalidRequest is error code defined by JSON-RPC 2.0 spec
+	// InvalidRequest is error code defined by JSON-RPC 2.0 spec.
 	// The JSON sent is not as valid Request object.
 	InvalidRequest = -32600
 
-	// MethodNotFound is error code defined by JSON-RPC 2.0 spec
+	// MethodNotFound is error code defined by JSON-RPC 2.0 spec.
 	// The method does not exist / is not available.
 	MethodNotFound = -32601
 
-	// InvalidParams is error code defined by JSON-RPC 2.0 spec
+	// InvalidParams is error code defined by JSON-RPC 2.0 spec.
 	// Invalid method parameter(s).
 	InvalidParams = -32602
 
-	// InternalError is error code defined by JSON-RPC 2.0 spec
+	// InternalError is error code defined by JSON-RPC 2.0 spec.
 	// Internal JSON-RPC error.
 	InternalError = -32603
 
-	// ServerError is error code defined by JSON-RPC 2.0 spec
+	// ServerError is error code defined by JSON-RPC 2.0 spec.
 	// Reserved for implementation-defined server-errors.
 	ServerError = -32000
 
-	// Version is only supported JSON-RPC Version
+	// Version is only supported JSON-RPC Version.
 	Version = "2.0"
 )
 
@@ -57,7 +57,7 @@ type Request struct {
 
 	// An identifier established by the Client that MUST contain as String, Number, or NULL value if included.
 	// If it is not included it is assumed to be as notification.
-	// The value SHOULD normally not be Null [1] and Numbers SHOULD NOT contain fractional parts
+	// The value SHOULD normally not be Null [1] and Numbers SHOULD NOT contain fractional parts.
 	ID *json.RawMessage `json:"id"`
 
 	// A String containing the name of the method to be invoked.
@@ -69,7 +69,7 @@ type Request struct {
 	// This member MAY be omitted.
 	Params json.RawMessage `json:"params"`
 
-	// Namespace holds
+	// Namespace holds namespace. Not in spec, for internal needs.
 	Namespace string `json:"-"`
 }
 
@@ -96,7 +96,7 @@ type Response struct {
 	Error *Error `json:"error,omitempty"`
 }
 
-// JSON is temporary method that silences error during json marshalling
+// JSON is temporary method that silences error during json marshalling.
 func (r Response) JSON() []byte {
 	// TODO process error
 	b, _ := json.Marshal(r)
@@ -123,10 +123,12 @@ type Error struct {
 	Err error `json:"-"`
 }
 
+// NewStringError makes a JSON-RPC with given code and message.
 func NewStringError(code int, message string) *Error {
 	return &Error{Code: code, Message: message}
 }
 
+// NewError makes a JSON-RPC error with given code and standard error.
 func NewError(code int, err error) *Error {
 	e := &Error{Code: code, Err: err}
 	e.Message = e.Error()

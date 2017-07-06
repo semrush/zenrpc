@@ -13,7 +13,6 @@ import (
 	"strings"
 	"testing"
 
-	"fmt"
 	"github.com/sergeyfast/zenrpc"
 	"github.com/sergeyfast/zenrpc/smd"
 )
@@ -91,13 +90,14 @@ func (as ArithService) Invoke(ctx context.Context, method string, params json.Ra
 				Float float32 `json:"float"`
 				Array []int   `json:"array"`
 			} `json:"obj"`
-			Array []string       `json:"array"`
-			Map   map[string]int `json:"map"`
+			Array    []string       `json:"array"`
+			Map      map[string]int `json:"map"`
+			Nullable *bool          `json:"nullable"`
 		}{}
 
 		if zenrpc.IsArray(params) {
 			// generate it
-			keys := []string{"str", "int", "obj", "array", "map"}
+			keys := []string{"str", "int", "obj", "array", "map", "nullable"}
 
 			// TODO refactor - think how to get rid of else
 			if conv, err := zenrpc.ConvertToObject(keys, params); err != nil {
@@ -107,12 +107,15 @@ func (as ArithService) Invoke(ctx context.Context, method string, params json.Ra
 			}
 		}
 
-		if err := json.Unmarshal(params, &args); err != nil {
-			return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+		// params may be omitted by spec
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
 		}
 
 		// todo set default values
-		resp.Set(fmt.Sprintf("%v", args))
+		resp.Set(args)
 	case "divide":
 		var args = struct {
 			A int `json:"a"`
@@ -229,7 +232,7 @@ func TestServer_ServeHTTPArray(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(rpc.ServeHTTP))
 	defer ts.Close()
 
-	out := `{"jsonrpc":"2.0","id":1,"result":"{test 1 {test nested 1.5 [1 2 3]} [el1 el2] map[key1:1]}"}`
+	out := `{"jsonrpc":"2.0","id":1,"result":{"str":"test","int":1,"obj":{"str":"test nested","float":1.5,"array":[1,2,3]},"array":["el1","el2"],"map":{"key1":1},"nullable":null}}`
 	var tc = []struct {
 		in, out string
 	}{
@@ -255,6 +258,9 @@ func TestServer_ServeHTTPArray(t *testing.T) {
 				   },
 				   "id": 1 }`,
 			out: out},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "arith.print", "id": 1 }`,
+			out: `{"jsonrpc":"2.0","id":1,"result":{"str":"","int":0,"obj":{"str":"","float":0,"array":null},"array":null,"map":null,"nullable":null}}`},
 	}
 
 	for _, c := range tc {

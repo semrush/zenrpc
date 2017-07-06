@@ -17,23 +17,23 @@ import (
 type contextKey string
 
 const (
-	// defaultBatchMaxLen is default value of BatchMaxLen option in rpc Server options
+	// defaultBatchMaxLen is default value of BatchMaxLen option in rpc Server options.
 	defaultBatchMaxLen = 10
 
 	// defaultTargetURL is default value for SMD target url.
 	defaultTargetURL = "/"
 
-	// context key for http.Request object
+	// context key for http.Request object.
 	requestKey contextKey = "request"
 
-	// context key for namespace
+	// context key for namespace.
 	namespaceKey contextKey = "namespace"
 
 	// contentTypeJSON is default content type for HTTP transport.
 	contentTypeJSON = "application/json"
 )
 
-// MiddlewareFunc is a function for executing as middleware
+// MiddlewareFunc is a function for executing as middleware.
 type MiddlewareFunc func(InvokeFunc) InvokeFunc
 
 // InvokeFunc is a function for processing single JSON-RPC 2.0 Request after validation and parsing.
@@ -48,9 +48,9 @@ type Invoker interface {
 // Service is as struct for discovering JSON-RPC 2.0 services for zenrpc generator cmd.
 type Service struct{}
 
-// Options is options for JSON-RPC 2.0 Server
+// Options is options for JSON-RPC 2.0 Server.
 type Options struct {
-	// BatchMaxLen sets maximum quantity of requests in single batch
+	// BatchMaxLen sets maximum quantity of requests in single batch.
 	BatchMaxLen int
 
 	// TargetURL is RPC endpoint.
@@ -177,7 +177,7 @@ func (s Server) processBatch(ctx context.Context, requests []Request) []Response
 	return responses
 }
 
-// processRequest processes a single request in service invoker
+// processRequest processes a single request in service invoker.
 func (s Server) processRequest(ctx context.Context, req Request) Response {
 	// checks for json-rpc version and method
 	if req.Version != Version || req.Method == "" {
@@ -267,7 +267,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-// IsArray checks json message if it array or object
+// IsArray checks json message if it array or object.
 func IsArray(message json.RawMessage) bool {
 	for _, b := range message {
 		if unicode.IsSpace(rune(b)) {
@@ -283,7 +283,7 @@ func IsArray(message json.RawMessage) bool {
 	return false
 }
 
-// ConvertToObject convert json array into object using key by index from keys array
+// ConvertToObject converts json array into object using key by index from keys array.
 func ConvertToObject(keys []string, params json.RawMessage) (json.RawMessage, error) {
 	paramCount := len(keys)
 
@@ -292,7 +292,8 @@ func ConvertToObject(keys []string, params json.RawMessage) (json.RawMessage, er
 		return nil, err
 	}
 
-	if paramCount != len(rawParams) {
+	rawParamCount := len(rawParams)
+	if paramCount < rawParamCount {
 		return nil, fmt.Errorf("Invalid params number, expected %d, got %d", paramCount, len(rawParams))
 	}
 
@@ -313,7 +314,7 @@ func ConvertToObject(keys []string, params json.RawMessage) (json.RawMessage, er
 		}
 
 		// Writing trailing comma if not last argument
-		if i != paramCount-1 {
+		if i != rawParamCount-1 {
 			if _, err := buf.WriteString(`,`); err != nil {
 				return nil, err
 			}
