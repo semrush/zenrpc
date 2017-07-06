@@ -7,7 +7,7 @@ const (
 	Integer = "integer"
 	Array   = "array"
 	Boolean = "boolean"
-	Float   = "float"
+	Float   = "number"
 	Object  = "object"
 )
 
