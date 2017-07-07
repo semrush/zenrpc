@@ -103,7 +103,9 @@ func (pi *PackageInfo) parseFile(filename string) error {
 	if err != nil {
 		return err
 	}
-	//ast.Print(fset, f) // for debug
+
+	// for debug
+	//ast.Print(fset, f)
 
 	if len(pi.PackageName) == 0 {
 		pi.PackageName = f.Name.Name
@@ -173,14 +175,14 @@ func (pi *PackageInfo) parseMethods(f *ast.File) error {
 			Description:   parseCommentGroup(fdecl.Doc),
 		}
 
-		m.linkWithServices(pi, fdecl)
+		serviceNames := m.linkWithServices(pi, fdecl)
 
 		// parse arguments
-		if fdecl.Type.Params == nil || fdecl.Type.Params.List == nil {
+		if len(serviceNames) == 0 || fdecl.Type.Params == nil || fdecl.Type.Params.List == nil {
 			continue
 		}
 
-		if err := m.parseArguments(fdecl); err != nil {
+		if err := m.parseArguments(fdecl, serviceNames); err != nil {
 			return err
 		}
 
@@ -213,7 +215,7 @@ func (pi PackageInfo) String() string {
 }
 
 // linkWithServices add method for services
-func (m *Method) linkWithServices(pi *PackageInfo, fdecl *ast.FuncDecl) {
+func (m *Method) linkWithServices(pi *PackageInfo, fdecl *ast.FuncDecl) (names []string) {
 	for _, field := range fdecl.Recv.List {
 		// field can be pointer or not
 		var ident *ast.Ident
@@ -233,14 +235,17 @@ func (m *Method) linkWithServices(pi *PackageInfo, fdecl *ast.FuncDecl) {
 		// method can be in several services
 		for _, s := range pi.Services {
 			if s.Name == ident.Name {
+				names = append(names, s.Name)
 				s.Methods = append(s.Methods, m)
 				break
 			}
 		}
 	}
+
+	return
 }
 
-func (m *Method) parseArguments(fdecl *ast.FuncDecl) error {
+func (m *Method) parseArguments(fdecl *ast.FuncDecl, serviceNames []string) error {
 	for _, field := range fdecl.Type.Params.List {
 		if field.Names == nil {
 			continue
@@ -249,7 +254,18 @@ func (m *Method) parseArguments(fdecl *ast.FuncDecl) error {
 		// parse type
 		typeName := parseType(field.Type)
 		if typeName == "" {
-			return errors.New("Can't parse type of argument")
+			// get argument names
+			fields := []string{}
+			for _, name := range field.Names {
+				fields = append(fields, name.Name)
+			}
+
+			// get Service.Method list
+			methods := []string{}
+			for _, s := range serviceNames {
+				methods = append(methods, s+"."+m.Name)
+			}
+			return errors.New(fmt.Sprintf("Can't parse type of argument %s in %s", strings.Join(fields, ", "), strings.Join(methods, ", ")))
 		}
 
 		if typeName == contextTypeName {
