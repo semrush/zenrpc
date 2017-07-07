@@ -3,16 +3,18 @@ package main
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"go/ast"
 	"go/format"
 	"go/parser"
 	"go/token"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 	"unicode/utf8"
 )
@@ -23,10 +25,15 @@ const (
 	contextTypeName    = "context.Context"
 	generateFileSuffix = "_zenrpc.go"
 	testFileSuffix     = "_test.go"
+	goFileSuffix       = ".go"
 	zenrpcMagicPrefix  = "//zenrpc:"
+
+	openIssueURL = "https://github.com/sergeyfast/zenrpc/issues/new"
+	githubURL    = "https://github.com/sergeyfast/zenrpc"
 )
 
 func main() {
+	start := time.Now()
 	var filename string
 	if len(os.Args) > 1 {
 		filename = os.Args[len(os.Args)-1]
@@ -34,25 +41,41 @@ func main() {
 		filename = os.Getenv("GOFILE")
 	}
 
-	log.Printf("Entrypoint: %s", filename)
+	fmt.Printf("Entrypoint: %s\n", filename)
 
 	pi := packageInfo{Services: []*service{}, Errors: make(map[int]string)}
 	dir, err := pi.parseFiles(filename)
 	if err != nil {
-		log.Fatal(err)
+		printError(err)
 	}
 
 	if len(pi.Services) == 0 {
-		log.Printf("Services not found")
+		fmt.Printf("Services not found")
 		return
 	}
 
 	outputFileName, err := pi.generateFile(dir)
 	if err != nil {
-		log.Fatal(err)
+		printError(err)
 	}
 
-	log.Printf("Generated: %s", outputFileName)
+	fmt.Printf("Generated: %s\n", outputFileName)
+	fmt.Printf("Duration: %s\n", time.Since(start))
+	pi.PrintInfo()
+}
+
+func printError(err error) {
+	// print error wish stack trace to stderr
+	fmt.Fprintf(os.Stderr, "\nError: %s\n", err)
+	fmt.Fprint(os.Stderr, string(debug.Stack()))
+
+	// print contact information to stdout
+	fmt.Println("\nYou may help us and create issue:")
+	fmt.Printf("\t%s\n", openIssueURL)
+	fmt.Println("For more information, see:")
+	fmt.Printf("\t%s\n\n", githubURL)
+
+	os.Exit(1)
 }
 
 // packageInfo represents struct info for XXX_zenrpc.go file generation
@@ -109,16 +132,13 @@ func (pi *packageInfo) parseFiles(filename string) (string, error) {
 		return dir, err
 	}
 
-	if len(files) == 0 {
-		return dir, errors.New("Directory is empty")
-	}
-
 	for _, f := range files {
 		if f.IsDir() {
 			continue
 		}
 
-		if strings.HasSuffix(f.Name(), generateFileSuffix) || strings.HasSuffix(f.Name(), testFileSuffix) {
+		if !strings.HasSuffix(f.Name(), goFileSuffix) ||
+			strings.HasSuffix(f.Name(), generateFileSuffix) || strings.HasSuffix(f.Name(), testFileSuffix) {
 			continue
 		}
 
@@ -247,6 +267,27 @@ func (pi *packageInfo) generateFile(dir string) (string, error) {
 	}
 
 	return outputFileName, nil
+}
+
+func (pi packageInfo) PrintInfo() {
+	fmt.Printf("\nGenerated services for package %s:\n", pi.PackageName)
+	for _, s := range pi.Services {
+		fmt.Printf("- %s\n", s.Name)
+		for _, m := range s.Methods {
+			fmt.Printf("  • %s", m.Name)
+			fmt.Printf("(")
+			for i, a := range m.Args {
+				if i != 0 {
+					fmt.Printf(", ")
+				}
+
+				fmt.Printf("%s %s", a.Name, a.Type)
+			}
+			fmt.Printf(")\n")
+		}
+	}
+
+	fmt.Println()
 }
 
 // linkWithServices add method for services
