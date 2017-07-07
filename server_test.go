@@ -7,9 +7,11 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
+	"github.com/gorilla/websocket"
 	"github.com/semrush/zenrpc"
 	"github.com/semrush/zenrpc/testdata"
 )
@@ -248,6 +250,71 @@ func TestServer_ServeHTTPWithErrors(t *testing.T) {
 		if string(resp) != c.out {
 			t.Errorf("Input: %s\n got %s expected %s", c.in, resp, c.out)
 		}
+	}
+}
+
+func TestServer_ServeWS(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(rpc.ServeWS))
+	defer ts.Close()
+
+	u, _ := url.Parse(ts.URL)
+	u.Scheme = "ws"
+
+	ws, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer ws.Close()
+
+	var tc = []struct {
+		in, out string
+	}{
+		{
+			in:  `{"jsonrpc": "2.0", "method": "arith.divide", "params": { "a": 1, "b": 24 }, "id": 1 }`,
+			out: `{"jsonrpc":"2.0","id":1,"result":{"Quo":0,"rem":1}}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "arith.divide", "params": { "a": 1, "b": 0 }, "id": 1 }`,
+			out: `{"jsonrpc":"2.0","id":1,"error":{"code":-32603,"message":"divide by zero"}}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "Arith.Divide", "params": { "a": 1, "b": 1 }, "id": "1" }`,
+			out: `{"jsonrpc":"2.0","id":"1","error":{"code":401,"message":"we do not serve 1"}}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "arith.multiply", "params": { "a": 3, "b": 2 }, "id": 0 }`,
+			out: `{"jsonrpc":"2.0","id":0,"result":6}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "multiply", "params": { "a": 4, "b": 2 }, "id": 0 }`,
+			out: `{"jsonrpc":"2.0","id":0,"result":8}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "arith.pow", "params": { "base": 3, "exp": 3 }, "id": 0 }`,
+			out: `{"jsonrpc":"2.0","id":0,"result":27}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "arith.sum", "params": { "a": 3, "b": 3 }, "id": 1 }`,
+			out: `{"jsonrpc":"2.0","id":1,"error":{"code":6,"message":"` + ts.Listener.Addr().String() + `"}}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "arith.pow", "params": { "base": 3 }, "id": 0 }`,
+			out: `{"jsonrpc":"2.0","id":0,"result":9}`},
+	}
+
+	for _, c := range tc {
+		if err := ws.WriteMessage(websocket.TextMessage, []byte(c.in)); err != nil {
+			log.Fatal(err)
+			return
+		}
+
+		_, resp, err := ws.ReadMessage()
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+
+		if string(resp) != c.out {
+			t.Errorf("Input: %s\n got %s expected %s", c.in, resp, c.out)
+		}
+	}
+
+	if err := ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")); err != nil {
+		log.Fatal(err)
+		return
 	}
 }
 

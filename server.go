@@ -12,6 +12,7 @@ import (
 	"unicode"
 
 	"github.com/semrush/zenrpc/smd"
+	"github.com/gorilla/websocket"
 )
 
 type contextKey string
@@ -159,7 +160,6 @@ func (s Server) processBatch(ctx context.Context, requests []Request) []Response
 		}(req)
 	}
 
-	// TODO what if one of requests freezes?
 	// waiting to complete
 	wg.Wait()
 	close(respChan)
@@ -267,6 +267,73 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// TODO Move ws to separate file?
+var upgrader = websocket.Upgrader{}
+
+// ServeWS processes JSON-RPC 2.0 requests via Gorilla WebSocket.
+// https://github.com/gorilla/websocket/blob/master/examples/echo/
+func (s Server) ServeWS(w http.ResponseWriter, r *http.Request) {
+	c, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		// TODO Errors
+		// w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer c.Close()
+
+	for {
+		mt, message, err := c.ReadMessage()
+		// TODO Handle all close error (GoingAway, Abnormal etc.)
+		if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+			break
+		}
+		if err != nil {
+			// TODO Errors
+			// w.WriteHeader(http.StatusInternalServerError)
+			break
+		}
+
+		// TODO Errors
+		data, err := json.Marshal(s.process(newRequestContext(r.Context(), r), message))
+		if err != nil {
+			// w.WriteHeader(http.StatusInternalServerError)
+		}
+
+		if err = c.WriteMessage(mt, data); err != nil {
+			// TODO Errors
+			// w.WriteHeader(http.StatusInternalServerError)
+			break
+		}
+	}
+}
+
+// SMD returns Service Mapping Description object with all registered methods.
+func (s Server) SMD() smd.Schema {
+	sch := smd.Schema{
+		Transport:   "POST",
+		Envelope:    "JSON-RPC-2.0",
+		SMDVersion:  "2.0",
+		ContentType: contentTypeJSON,
+		Target:      s.options.TargetURL,
+		Services:    make(map[string]smd.Service),
+	}
+
+	for n, v := range s.services {
+		info, namespace := v.SMD(), ""
+		if n != "" {
+			namespace = n + "."
+		}
+
+		for m, d := range info.Methods {
+			method := namespace + m
+			sch.Services[method] = d
+			sch.Description += info.Description // TODO formatting
+		}
+	}
+
+	return sch
+}
+
 // IsArray checks json message if it array or object.
 func IsArray(message json.RawMessage) bool {
 	for _, b := range message {
@@ -326,33 +393,6 @@ func ConvertToObject(keys []string, params json.RawMessage) (json.RawMessage, er
 	}
 
 	return buf.Bytes(), nil
-}
-
-// SMD returns Service Mapping Description object with all registered methods.
-func (s Server) SMD() smd.Schema {
-	sch := smd.Schema{
-		Transport:   "POST",
-		Envelope:    "JSON-RPC-2.0",
-		SMDVersion:  "2.0",
-		ContentType: contentTypeJSON,
-		Target:      s.options.TargetURL,
-		Services:    make(map[string]smd.Service),
-	}
-
-	for n, v := range s.services {
-		info, namespace := v.SMD(), ""
-		if n != "" {
-			namespace = n + "."
-		}
-
-		for m, d := range info.Methods {
-			method := namespace + m
-			sch.Services[method] = d
-			sch.Description += info.Description // TODO formatting
-		}
-	}
-
-	return sch
 }
 
 // newRequestContext creates new context with http.Request.
