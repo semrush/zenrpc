@@ -7,7 +7,6 @@ import (
 	"go/format"
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"time"
 )
 
@@ -52,9 +51,8 @@ func main() {
 }
 
 func printError(err error) {
-	// print error wish stack trace to stderr
-	fmt.Fprintf(os.Stderr, "\nError: %s\n", err)
-	fmt.Fprint(os.Stderr, string(debug.Stack()))
+	// print error to stderr
+	fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 
 	// print contact information to stdout
 	fmt.Println("\nYou may help us and create issue:")
