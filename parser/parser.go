@@ -40,13 +40,15 @@ type Service struct {
 }
 
 type Method struct {
-	FuncDecl      *ast.FuncType
-	Name          string
-	LowerCaseName string
-	HasContext    bool
-	Args          []*Arg
-	DefaultValues []*DefaultValue
-	Description   string
+	FuncDecl          *ast.FuncType
+	Name              string
+	LowerCaseName     string
+	HasContext        bool
+	Args              []*Arg
+	DefaultValues     []*DefaultValue
+	Returns           []*Return
+	ReturnDescription string
+	Description       string
 }
 
 type DefaultValue struct {
@@ -64,6 +66,13 @@ type Arg struct {
 	JsonName    string
 	HasStar     bool
 	Description string // from magic comment
+	SMDType     string
+}
+
+type Return struct {
+	Name        string
+	Type        string
+	HasStar     bool
 	SMDType     string
 }
 
@@ -186,6 +195,10 @@ func (pi *PackageInfo) parseMethods(f *ast.File) error {
 			return err
 		}
 
+		if err := m.parseReturns(fdecl, serviceNames); err != nil {
+			return err
+		}
+
 		// parse default values
 		m.parseComments(fdecl.Doc, pi)
 	}
@@ -199,15 +212,44 @@ func (pi PackageInfo) String() string {
 		result += fmt.Sprintf("- %s\n", s.Name)
 		for _, m := range s.Methods {
 			result += fmt.Sprintf("  • %s", m.Name)
-			result += fmt.Sprintf("(")
+
+			// args
+			result += "("
 			for i, a := range m.Args {
 				if i != 0 {
-					result += fmt.Sprintf(", ")
+					result += ", "
 				}
 
 				result += fmt.Sprintf("%s %s", a.Name, a.Type)
 			}
-			result += fmt.Sprintf(")\n")
+			result += ") "
+
+			// no return args
+			if len(m.Returns) == 0 {
+				result += "\n"
+				continue
+			}
+
+			// only one return arg without name
+			if len(m.Returns) == 1 && len(m.Returns[0].Name) == 0 {
+				result += m.Returns[0].Type + "\n"
+				continue
+			}
+
+			// return
+			result += "("
+			for i, a := range m.Returns {
+				if i != 0 {
+					result += fmt.Sprintf(", ")
+				}
+
+				if len(a.Name) == 0 {
+					result += a.Type
+				} else {
+					result += fmt.Sprintf("%s %s", a.Name, a.Type)
+				}
+			}
+			result += ")\n"
 		}
 	}
 
@@ -243,6 +285,44 @@ func (m *Method) linkWithServices(pi *PackageInfo, fdecl *ast.FuncDecl) (names [
 	}
 
 	return
+}
+
+func (m *Method) parseReturns(fdecl *ast.FuncDecl, serviceNames []string) error {
+	for _, field := range fdecl.Type.Results.List {
+		// parse type
+		typeName := parseType(field.Type)
+		if typeName == "" {
+			// get Service.Method list
+			methods := []string{}
+			for _, s := range serviceNames {
+				methods = append(methods, s+"."+m.Name)
+			}
+			return errors.New(fmt.Sprintf("Can't parse type of return value in %s on position %d", strings.Join(methods, ", "), len(m.Returns)+1))
+		}
+
+		hasStar := hasStar(typeName) // check for pointer
+		smdType := parseSMDType(field.Type)
+
+		// parse names if exist and add item to list
+		if field.Names == nil {
+			m.Returns = append(m.Returns, &Return{
+				Type:    typeName,
+				HasStar: hasStar,
+				SMDType: smdType,
+			})
+		} else {
+			for _, name := range field.Names {
+				m.Returns = append(m.Returns, &Return{
+					Name:    name.Name,
+					Type:    typeName,
+					HasStar: hasStar,
+					SMDType: smdType,
+				})
+			}
+		}
+	}
+
+	return nil
 }
 
 func (m *Method) parseArguments(fdecl *ast.FuncDecl, serviceNames []string) error {
@@ -374,6 +454,8 @@ func parseType(expr ast.Expr) string {
 		return "[" + parseType(v.Len) + "]" + parseType(v.Elt)
 	case *ast.MapType:
 		return "map[" + parseType(v.Key) + "]" + parseType(v.Value)
+	case *ast.InterfaceType:
+		return "interface{}"
 	case *ast.Ident:
 		return v.Name
 	case *ast.BasicLit:
@@ -388,7 +470,7 @@ func parseSMDType(expr ast.Expr) string {
 	switch v := expr.(type) {
 	case *ast.StarExpr:
 		return parseSMDType(v.X)
-	case *ast.SelectorExpr, *ast.MapType:
+	case *ast.SelectorExpr, *ast.MapType, *ast.InterfaceType:
 		return "Object"
 	case *ast.ArrayType:
 		return "Array"
