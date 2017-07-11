@@ -70,10 +70,9 @@ type Arg struct {
 }
 
 type Return struct {
-	Name        string
-	Type        string
-	HasStar     bool
-	SMDType     string
+	Name    string
+	Type    string
+	SMDType string
 }
 
 // ParseFiles parse all files associated with package from original file
@@ -181,13 +180,14 @@ func (pi *PackageInfo) parseMethods(f *ast.File) error {
 			LowerCaseName: strings.ToLower(fdecl.Name.Name),
 			Args:          []*Arg{},
 			DefaultValues: []*DefaultValue{},
+			Returns:       []*Return{},
 			Description:   parseCommentGroup(fdecl.Doc),
 		}
 
 		serviceNames := m.linkWithServices(pi, fdecl)
 
-		// parse arguments
-		if len(serviceNames) == 0 || fdecl.Type.Params == nil || fdecl.Type.Params.List == nil {
+		// services not found
+		if len(serviceNames) == 0 {
 			continue
 		}
 
@@ -287,45 +287,11 @@ func (m *Method) linkWithServices(pi *PackageInfo, fdecl *ast.FuncDecl) (names [
 	return
 }
 
-func (m *Method) parseReturns(fdecl *ast.FuncDecl, serviceNames []string) error {
-	for _, field := range fdecl.Type.Results.List {
-		// parse type
-		typeName := parseType(field.Type)
-		if typeName == "" {
-			// get Service.Method list
-			methods := []string{}
-			for _, s := range serviceNames {
-				methods = append(methods, s+"."+m.Name)
-			}
-			return errors.New(fmt.Sprintf("Can't parse type of return value in %s on position %d", strings.Join(methods, ", "), len(m.Returns)+1))
-		}
-
-		hasStar := hasStar(typeName) // check for pointer
-		smdType := parseSMDType(field.Type)
-
-		// parse names if exist and add item to list
-		if field.Names == nil {
-			m.Returns = append(m.Returns, &Return{
-				Type:    typeName,
-				HasStar: hasStar,
-				SMDType: smdType,
-			})
-		} else {
-			for _, name := range field.Names {
-				m.Returns = append(m.Returns, &Return{
-					Name:    name.Name,
-					Type:    typeName,
-					HasStar: hasStar,
-					SMDType: smdType,
-				})
-			}
-		}
+func (m *Method) parseArguments(fdecl *ast.FuncDecl, serviceNames []string) error {
+	if fdecl.Type.Params == nil || fdecl.Type.Params.List == nil {
+		return nil
 	}
 
-	return nil
-}
-
-func (m *Method) parseArguments(fdecl *ast.FuncDecl, serviceNames []string) error {
 	for _, field := range fdecl.Type.Params.List {
 		if field.Names == nil {
 			continue
@@ -366,6 +332,45 @@ func (m *Method) parseArguments(fdecl *ast.FuncDecl, serviceNames []string) erro
 				HasStar:     hasStar,
 				SMDType:     smdType,
 			})
+		}
+	}
+
+	return nil
+}
+
+func (m *Method) parseReturns(fdecl *ast.FuncDecl, serviceNames []string) error {
+	if fdecl.Type.Results == nil || fdecl.Type.Results.List == nil {
+		return nil
+	}
+
+	for _, field := range fdecl.Type.Results.List {
+		// parse type
+		typeName := parseType(field.Type)
+		if typeName == "" {
+			// get Service.Method list
+			methods := []string{}
+			for _, s := range serviceNames {
+				methods = append(methods, s+"."+m.Name)
+			}
+			return errors.New(fmt.Sprintf("Can't parse type of return value in %s on position %d", strings.Join(methods, ", "), len(m.Returns)+1))
+		}
+
+		smdType := parseSMDType(field.Type)
+
+		// parse names if exist and add item to list
+		if field.Names == nil {
+			m.Returns = append(m.Returns, &Return{
+				Type:    typeName,
+				SMDType: smdType,
+			})
+		} else {
+			for _, name := range field.Names {
+				m.Returns = append(m.Returns, &Return{
+					Name:    name.Name,
+					Type:    typeName,
+					SMDType: smdType,
+				})
+			}
 		}
 	}
 
