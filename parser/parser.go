@@ -20,6 +20,7 @@ const (
 	zenrpcComment     = "//zenrpc"
 	zenrpcService     = "zenrpc.Service"
 	contextTypeName   = "context.Context"
+	errorTypeName     = "zenrpc.Error"
 	testFileSuffix    = "_test.go"
 	goFileSuffix      = ".go"
 	zenrpcMagicPrefix = "//zenrpc:"
@@ -40,15 +41,15 @@ type Service struct {
 }
 
 type Method struct {
-	FuncDecl          *ast.FuncType
-	Name              string
-	LowerCaseName     string
-	HasContext        bool
-	Args              []*Arg
-	DefaultValues     []*DefaultValue
-	Returns           []*Return
-	ReturnDescription string
-	Description       string
+	FuncDecl      *ast.FuncType
+	Name          string
+	LowerCaseName string
+	HasContext    bool
+	Args          []Arg
+	DefaultValues map[string]DefaultValue
+	Returns       []Return   // array of all arguments for pretty print
+	SMDReturn     *SMDReturn // return for smd schema; pointer for nil check
+	Description   string
 }
 
 type DefaultValue struct {
@@ -70,9 +71,15 @@ type Arg struct {
 }
 
 type Return struct {
-	Name    string
-	Type    string
-	SMDType string
+	Name string
+	Type string
+}
+
+type SMDReturn struct {
+	Name        string
+	SMDType     string
+	HasStar     bool
+	Description string
 }
 
 // ParseFiles parse all files associated with package from original file
@@ -178,9 +185,9 @@ func (pi *PackageInfo) parseMethods(f *ast.File) error {
 			FuncDecl:      fdecl.Type,
 			Name:          fdecl.Name.Name,
 			LowerCaseName: strings.ToLower(fdecl.Name.Name),
-			Args:          []*Arg{},
-			DefaultValues: []*DefaultValue{},
-			Returns:       []*Return{},
+			Args:          []Arg{},
+			DefaultValues: make(map[string]DefaultValue),
+			Returns:       []Return{},
 			Description:   parseCommentGroup(fdecl.Doc),
 		}
 
@@ -324,7 +331,7 @@ func (m *Method) parseArguments(fdecl *ast.FuncDecl, serviceNames []string) erro
 
 		// parse names
 		for _, name := range field.Names {
-			m.Args = append(m.Args, &Arg{
+			m.Args = append(m.Args, Arg{
 				Name:        name.Name,
 				Type:        typeName,
 				CapitalName: strings.Title(name.Name),
@@ -343,34 +350,56 @@ func (m *Method) parseReturns(fdecl *ast.FuncDecl, serviceNames []string) error 
 		return nil
 	}
 
+	// get Service.Method list
+	methods := func() string {
+		methods := []string{}
+		for _, s := range serviceNames {
+			methods = append(methods, s+"."+m.Name)
+		}
+		return strings.Join(methods, ", ")
+	}
+
+	hasError := false
 	for _, field := range fdecl.Type.Results.List {
+		if len(field.Names) > 1 {
+			return errors.New(fmt.Sprintf("%s contain more than one return arguments with same type", methods()))
+		}
+
 		// parse type
 		typeName := parseType(field.Type)
 		if typeName == "" {
-			// get Service.Method list
-			methods := []string{}
-			for _, s := range serviceNames {
-				methods = append(methods, s+"."+m.Name)
-			}
-			return errors.New(fmt.Sprintf("Can't parse type of return value in %s on position %d", strings.Join(methods, ", "), len(m.Returns)+1))
+			return errors.New(fmt.Sprintf("Can't parse type of return value in %s on position %d", methods(), len(m.Returns)+1))
 		}
 
-		smdType := parseSMDType(field.Type)
+		var fieldName string
+		// get names if exist
+		if field.Names != nil {
+			fieldName = field.Names[0].Name
+		}
 
-		// parse names if exist and add item to list
-		if field.Names == nil {
-			m.Returns = append(m.Returns, &Return{
-				Type:    typeName,
-				SMDType: smdType,
-			})
-		} else {
-			for _, name := range field.Names {
-				m.Returns = append(m.Returns, &Return{
-					Name:    name.Name,
-					Type:    typeName,
-					SMDType: smdType,
-				})
+		m.Returns = append(m.Returns, Return{
+			Type: typeName,
+			Name: fieldName,
+		})
+
+		if typeName == "error" || typeName == errorTypeName || typeName == "*"+errorTypeName {
+			if hasError {
+				return errors.New(fmt.Sprintf("%s contain more than one error return arguments", methods()))
 			}
+			hasError = true
+			continue
+		}
+
+		if m.SMDReturn != nil {
+			return errors.New(fmt.Sprintf("%s contain more than one value return argument", methods()))
+		}
+
+		hasStar := hasStar(typeName) // check for pointer
+		smdType := parseSMDType(field.Type)
+		m.SMDReturn = &SMDReturn{
+			Name:    fieldName,
+			SMDType: smdType,
+			HasStar: hasStar,
 		}
 	}
 
@@ -398,21 +427,21 @@ func (m *Method) parseComments(doc *ast.CommentGroup, pi *PackageInfo) {
 		couple[0] = strings.TrimPrefix(strings.TrimSpace(couple[0]), zenrpcMagicPrefix)
 
 		// parse arguments
-		args := strings.Split(couple[0], ":")
-		if len(args) == 2 {
+		if args := strings.Split(couple[0], ":"); len(args) == 2 {
 			// default value
+			// example: "//zenrpc:exp:2 	exponent could be empty"
 			name := args[0]
 			value := args[1]
 
 			for _, a := range m.Args {
 				if a.Name == name {
-					m.DefaultValues = append(m.DefaultValues, &DefaultValue{
+					m.DefaultValues[name] = DefaultValue{
 						Name:        name,
 						CapitalName: a.CapitalName,
 						Type:        a.Type[1:], // remove star
 						Comment:     comment.Text,
 						Value:       value,
-					})
+					}
 
 					if len(couple) == 2 {
 						a.Description = strings.TrimSpace(couple[1])
@@ -421,9 +450,13 @@ func (m *Method) parseComments(doc *ast.CommentGroup, pi *PackageInfo) {
 					break
 				}
 			}
-		} else if i, err := strconv.Atoi(args[0]); err == nil && len(couple) == 2 {
-			// add error code
-			// example: //zenrpc:-32603		divide by zero
+		} else if couple[0] == "return" {
+			// description for return
+			// example: "//zenrpc:return operation result"
+			m.SMDReturn.Description = strings.TrimSpace(couple[1])
+		} else if i, err := strconv.Atoi(couple[0]); err == nil && len(couple) == 2 {
+			// error code
+			// example: "//zenrpc:-32603		divide by zero"
 			pi.Errors[i] = strings.TrimSpace(couple[1])
 		}
 	}

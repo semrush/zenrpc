@@ -131,7 +131,7 @@ func (pb PhoneBook) Delete(id uint64) (success bool, error error) {
 
 // Removes deletes person from DB.
 //zenrpc:id person id
-//zenrpc:success operation result
+//zenrpc:return operation result
 func (pb PhoneBook) Remove(id uint64) (success bool, error error) {
 	if _, ok := pb.DB[id]; ok {
 		delete(pb.DB, id)

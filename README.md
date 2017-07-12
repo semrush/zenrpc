@@ -14,7 +14,17 @@ It's built on top of `go generate` instead of reflection.
   1. Add trailing comment `//zenrpc` to your service or embed `zenrpc.Service` into your service struct.
   1. Write your funcs almost as usual.
   1. Do not forget run `go generate` or `zenrpc` for magic
-  
+
+### Accepted Method Signatures
+
+    func(Service) Method([args]) (<value>, <error>)
+    func(Service) Method([args]) <value>
+    func(Service) Method([args]) <error>
+    func(Service) Method([args])
+
+- Value could be a pointer
+- Error is error or *zenrpc.Error
+
 ## Example
 ```go
 package main
@@ -95,7 +105,8 @@ All comments are optional.
 
     Method comments
     //zenrpc:<method parameter>[:<default value>][whitespaces<description>]
-    //zenrpc:<error code>[whitespaces<description>] 
+    //zenrpc:<error code>[whitespaces<description>]
+    //zenrpc:return[whitespaces<description>]
      
     Struct comments
     type MyService struct {} //zenrpc

@@ -20,6 +20,10 @@ func (as ArithService) Positive() (bool, *zenrpc.Error) {
 	return true, nil
 }
 
+func (ArithService) DoSomething() {
+	// some optimistic operations
+}
+
 // Multiply multiples two digits and returns result.
 func (as ArithService) Multiply(a, b int) int {
 	return a * b

@@ -36,7 +36,13 @@ func ({{.Name}}) SMD() smd.ServiceInfo {
 				Description: ` + "`{{.Description}}`" + `,
 				Parameters: []smd.JSONSchema{ {{ range .Args }}
 					{Name: "{{.Name}}", Optional: {{.HasStar}}, Description: ` + "`{{.Description}}`" + `, Type: smd.{{.SMDType}}}, {{ end }}
-				},
+				}, {{if .SMDReturn}}
+				Returns: smd.JSONSchema{
+					Type:        smd.{{.SMDReturn.SMDType}}, {{if .SMDReturn.Description}}
+					Description: ` + "`{{.SMDReturn.Description}}`" + `,{{end}}
+					Optional:    {{.SMDReturn.HasStar}},
+
+				}, {{end}}
 			}, {{ end }}
 		},
 	}
@@ -48,33 +54,38 @@ func (s {{.Name}}) Invoke(ctx context.Context, method string, params json.RawMes
 	var err error
 
 	switch method { {{range .Methods }}
-	case RPC.{{$s.Name}}.{{.Name}}:
-		var args = struct {
-			{{ range .Args }}
-			{{.CapitalName}} {{.Type}} ` + "`json:\"{{.JsonName}}\"`" + ` {{ end }}
-		}{}
+	case RPC.{{$s.Name}}.{{.Name}}: {{ if .Args }}
+			var args = struct {
+				{{ range .Args }}
+				{{.CapitalName}} {{.Type}} ` + "`json:\"{{.JsonName}}\"`" + ` {{ end }}
+			}{}
 
-		if zenrpc.IsArray(params) {
-			if params, err = zenrpc.ConvertToObject([]string{ {{ range .Args }}"{{.JsonName}}",{{ end }} }, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			if zenrpc.IsArray(params) {
+				if params, err = zenrpc.ConvertToObject([]string{ {{ range .Args }}"{{.JsonName}}",{{ end }} }, params); err != nil {
+					return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				}
 			}
-		}
 
-		if len(params) > 0 {
-			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			if len(params) > 0 {
+				if err := json.Unmarshal(params, &args); err != nil {
+					return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				}
 			}
-		}
 
-		{{ range .DefaultValues }}
-		{{.Comment}}
-		if args.{{.CapitalName}} == nil {
-			var v {{.Type}} = {{.Value}}
-			args.{{.CapitalName}} = &v
-		}
-		{{ end }}
+			{{ range .DefaultValues }}
+				{{.Comment}}
+				if args.{{.CapitalName}} == nil {
+					var v {{.Type}} = {{.Value}}
+					args.{{.CapitalName}} = &v
+				}
+			{{ end }}
 
-		resp.Set(s.{{.Name}}({{if .HasContext}}ctx, {{end}} {{ range .Args }}args.{{.CapitalName}}, {{ end }})) {{ end }}
+		{{ end }} {{if .Returns}}
+			resp.Set(s.{{.Name}}({{if .HasContext}}ctx, {{end}} {{ range .Args }}args.{{.CapitalName}}, {{ end }}))
+		{{else}}
+			s.{{.Name}}({{if .HasContext}}ctx, {{end}} {{ range .Args }}args.{{.CapitalName}}, {{ end }})
+		{{end}}
+	{{ end }}
 	default:
 		resp = zenrpc.NewResponseError(nil, zenrpc.MethodNotFound, "", nil)
 	}
