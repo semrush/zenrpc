@@ -27,7 +27,7 @@ func main() {
 
 	fmt.Printf("Entrypoint: %s\n", filename)
 
-	pi := parser.PackageInfo{Services: []*parser.Service{}, Errors: make(map[int]string)}
+	pi := parser.NewPackageInfo()
 	dir, err := pi.ParseFiles(filename)
 	if err != nil {
 		printError(err)
@@ -38,7 +38,7 @@ func main() {
 		return
 	}
 
-	outputFileName, err := generateFile(&pi, dir)
+	outputFileName, err := generateFile(pi, dir)
 	if err != nil {
 		printError(err)
 	}

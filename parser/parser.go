@@ -31,6 +31,9 @@ type PackageInfo struct {
 	PackageName string
 	Services    []*Service
 	Errors      map[int]string // errors map for documentation in SMD
+
+	Scopes  []*ast.Scope // array of scopes from each package file
+	Structs map[string]*Struct
 }
 
 type Service struct {
@@ -47,8 +50,8 @@ type Method struct {
 	HasContext    bool
 	Args          []Arg
 	DefaultValues map[string]DefaultValue
-	Returns       []Return   // array of all arguments for pretty print
-	SMDReturn     *SMDReturn // return for smd schema; pointer for nil check
+	Returns       []Return
+	SMDReturn     *SMDReturn // return for generate smd schema; pointer for nil check
 	Description   string
 }
 
@@ -68,6 +71,8 @@ type Arg struct {
 	HasStar     bool
 	Description string // from magic comment
 	SMDType     string
+
+	Ref string
 }
 
 type Return struct {
@@ -80,6 +85,25 @@ type SMDReturn struct {
 	SMDType     string
 	HasStar     bool
 	Description string
+
+	Ref string
+}
+
+type Struct struct {
+	Name      string // key in map, Ref in arguments and returns
+	Namespace string
+	Type      string
+	TypeSpec  *ast.TypeSpec
+}
+
+func NewPackageInfo() *PackageInfo {
+	return &PackageInfo{
+		Services: []*Service{},
+		Errors:   make(map[int]string),
+
+		Scopes:  []*ast.Scope{},
+		Structs: make(map[string]*Struct),
+	}
 }
 
 // ParseFiles parse all files associated with package from original file
@@ -135,6 +159,9 @@ func (pi *PackageInfo) parseFile(filename string) error {
 	if err := pi.parseMethods(f); err != nil {
 		return err
 	}
+
+	// collect current package scopes
+	pi.Scopes = append(pi.Scopes, f.Scope)
 
 	return nil
 }
@@ -198,11 +225,11 @@ func (pi *PackageInfo) parseMethods(f *ast.File) error {
 			continue
 		}
 
-		if err := m.parseArguments(fdecl, serviceNames); err != nil {
+		if err := m.parseArguments(pi, fdecl, serviceNames); err != nil {
 			return err
 		}
 
-		if err := m.parseReturns(fdecl, serviceNames); err != nil {
+		if err := m.parseReturns(pi, fdecl, serviceNames); err != nil {
 			return err
 		}
 
@@ -294,7 +321,7 @@ func (m *Method) linkWithServices(pi *PackageInfo, fdecl *ast.FuncDecl) (names [
 	return
 }
 
-func (m *Method) parseArguments(fdecl *ast.FuncDecl, serviceNames []string) error {
+func (m *Method) parseArguments(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNames []string) error {
 	if fdecl.Type.Params == nil || fdecl.Type.Params.List == nil {
 		return nil
 	}
@@ -329,6 +356,17 @@ func (m *Method) parseArguments(fdecl *ast.FuncDecl, serviceNames []string) erro
 		hasStar := hasStar(typeName) // check for pointer
 		smdType := parseSMDType(field.Type)
 
+		// find and save struct
+		s := parseStruct(field.Type)
+		var ref string
+		if s != nil {
+			ref = s.Name
+
+			if currentS, ok := pi.Structs[s.Name]; !ok || currentS.TypeSpec != nil {
+				pi.Structs[s.Name] = s
+			}
+		}
+
 		// parse names
 		for _, name := range field.Names {
 			m.Args = append(m.Args, Arg{
@@ -338,6 +376,7 @@ func (m *Method) parseArguments(fdecl *ast.FuncDecl, serviceNames []string) erro
 				JsonName:    lowerFirst(name.Name),
 				HasStar:     hasStar,
 				SMDType:     smdType,
+				Ref:         ref,
 			})
 		}
 	}
@@ -345,7 +384,7 @@ func (m *Method) parseArguments(fdecl *ast.FuncDecl, serviceNames []string) erro
 	return nil
 }
 
-func (m *Method) parseReturns(fdecl *ast.FuncDecl, serviceNames []string) error {
+func (m *Method) parseReturns(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNames []string) error {
 	if fdecl.Type.Results == nil || fdecl.Type.Results.List == nil {
 		return nil
 	}
@@ -391,15 +430,28 @@ func (m *Method) parseReturns(fdecl *ast.FuncDecl, serviceNames []string) error 
 		}
 
 		if m.SMDReturn != nil {
-			return errors.New(fmt.Sprintf("%s contain more than one value return argument", methods()))
+			return errors.New(fmt.Sprintf("%s contain more than one valuable return argument", methods()))
 		}
 
 		hasStar := hasStar(typeName) // check for pointer
 		smdType := parseSMDType(field.Type)
+
+		// find and save struct
+		s := parseStruct(field.Type)
+		var ref string
+		if s != nil {
+			ref = s.Name
+
+			if currentS, ok := pi.Structs[s.Name]; !ok || currentS.TypeSpec != nil {
+				pi.Structs[s.Name] = s
+			}
+		}
+
 		m.SMDReturn = &SMDReturn{
 			Name:    fieldName,
 			SMDType: smdType,
 			HasStar: hasStar,
+			Ref:     ref,
 		}
 	}
 
@@ -527,6 +579,49 @@ func parseSMDType(expr ast.Expr) string {
 		}
 	default:
 		return "Object" // default complex type is object
+	}
+}
+
+// parseStruct find struct in type for display in SMD
+func parseStruct(expr ast.Expr) *Struct {
+	switch v := expr.(type) {
+	case *ast.StarExpr:
+		return parseStruct(v.X)
+	case *ast.SelectorExpr:
+		namespace := v.X.(*ast.Ident).Name
+		return &Struct{
+			Name:      namespace + "." + v.Sel.Name,
+			Namespace: namespace,
+			Type:      v.Sel.Name,
+		}
+	case *ast.ArrayType:
+		// will get last type
+		return parseStruct(v.Elt)
+	case *ast.MapType:
+		// will get last type
+		return parseStruct(v.Value)
+	case *ast.Ident:
+		switch v.Name {
+		case "bool", "string",
+			"int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64", "uintptr", "byte", "rune",
+			"float32", "float64", "complex64", "complex128":
+			return nil
+		}
+
+		s := &Struct{
+			Name: v.Name,
+			Type: v.Name,
+		}
+
+		if v.Obj != nil && v.Obj.Decl != nil {
+			if ts, ok := v.Obj.Decl.(*ast.TypeSpec); ok {
+				s.TypeSpec = ts
+			}
+		}
+
+		return s
+	default:
+		return nil
 	}
 }
 
