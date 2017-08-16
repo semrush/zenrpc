@@ -35,13 +35,25 @@ func ({{.Name}}) SMD() smd.ServiceInfo {
 			"{{.Name}}": {
 				Description: ` + "`{{.Description}}`" + `,
 				Parameters: []smd.JSONSchema{ {{ range .Args }}
-					{Name: "{{.Name}}", Optional: {{.HasStar}}, Description: ` + "`{{.Description}}`" + `, Type: smd.{{.SMDType}}}, {{ end }}
+					{
+						Name: "{{.Name}}",
+						Optional: {{.HasStar}},
+						Description: ` + "`{{.Description}}`" + `,
+						Type: smd.{{.SMDType.Type}}, {{ if eq .SMDType.Type "Array" }}
+						Items: map[string]string{
+							"type": smd.{{.SMDType.ItemsType}},
+						}, {{end}}
+					},
+
+					{{ end }}
 				}, {{if .SMDReturn}}
-				Returns: smd.JSONSchema{
-					Type:        smd.{{.SMDReturn.SMDType}}, {{if .SMDReturn.Description}}
+				Returns: smd.JSONSchema{ {{if .SMDReturn.Description}}
 					Description: ` + "`{{.SMDReturn.Description}}`" + `,{{end}}
 					Optional:    {{.SMDReturn.HasStar}},
-
+					Type: smd.{{.SMDReturn.SMDType.Type}}, {{ if eq .SMDReturn.SMDType.Type "Array" }}
+					Items: map[string]string{
+						"type": smd.{{.SMDReturn.SMDType.ItemsType}},
+					}, {{end}}
 				}, {{end}}
 			}, {{ end }}
 		},

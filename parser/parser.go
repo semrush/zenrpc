@@ -32,7 +32,7 @@ type PackageInfo struct {
 	Services    []*Service
 	Errors      map[int]string // errors map for documentation in SMD
 
-	Scopes  []*ast.Scope // array of scopes from each package file
+	Scopes  map[string][]*ast.Scope // key - import name, value - array of scopes from each package file
 	Structs map[string]*Struct
 }
 
@@ -70,9 +70,7 @@ type Arg struct {
 	JsonName    string
 	HasStar     bool
 	Description string // from magic comment
-	SMDType     string
-
-	Ref string
+	SMDType     SMDType
 }
 
 type Return struct {
@@ -82,11 +80,9 @@ type Return struct {
 
 type SMDReturn struct {
 	Name        string
-	SMDType     string
 	HasStar     bool
 	Description string
-
-	Ref string
+	SMDType     SMDType
 }
 
 type Struct struct {
@@ -96,12 +92,18 @@ type Struct struct {
 	TypeSpec  *ast.TypeSpec
 }
 
+type SMDType struct {
+	Type      string
+	ItemsType string // for array
+	Ref       string // for object and also if array item is object
+}
+
 func NewPackageInfo() *PackageInfo {
 	return &PackageInfo{
 		Services: []*Service{},
 		Errors:   make(map[int]string),
 
-		Scopes:  []*ast.Scope{},
+		Scopes:  make(map[string][]*ast.Scope),
 		Structs: make(map[string]*Struct),
 	}
 }
@@ -133,6 +135,10 @@ func (pi *PackageInfo) ParseFiles(filename string) (string, error) {
 		}
 	}
 
+	// TODO parse imports and find other scopes from other modules
+	pi.fillStructs()
+	pi.parseStructs()
+
 	return dir, nil
 }
 
@@ -161,7 +167,7 @@ func (pi *PackageInfo) parseFile(filename string) error {
 	}
 
 	// collect current package scopes
-	pi.Scopes = append(pi.Scopes, f.Scope)
+	pi.Scopes["."] = append(pi.Scopes["."], f.Scope)
 
 	return nil
 }
@@ -354,7 +360,7 @@ func (m *Method) parseArguments(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNam
 		}
 
 		hasStar := hasStar(typeName) // check for pointer
-		smdType := parseSMDType(field.Type)
+		smdType, itemType := parseSMDType(field.Type)
 
 		// find and save struct
 		s := parseStruct(field.Type)
@@ -375,8 +381,11 @@ func (m *Method) parseArguments(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNam
 				CapitalName: strings.Title(name.Name),
 				JsonName:    lowerFirst(name.Name),
 				HasStar:     hasStar,
-				SMDType:     smdType,
-				Ref:         ref,
+				SMDType: SMDType{
+					Type:      smdType,
+					ItemsType: itemType,
+					Ref:       ref,
+				},
 			})
 		}
 	}
@@ -434,7 +443,7 @@ func (m *Method) parseReturns(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNames
 		}
 
 		hasStar := hasStar(typeName) // check for pointer
-		smdType := parseSMDType(field.Type)
+		smdType, itemType := parseSMDType(field.Type)
 
 		// find and save struct
 		s := parseStruct(field.Type)
@@ -449,9 +458,12 @@ func (m *Method) parseReturns(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNames
 
 		m.SMDReturn = &SMDReturn{
 			Name:    fieldName,
-			SMDType: smdType,
 			HasStar: hasStar,
-			Ref:     ref,
+			SMDType: SMDType{
+				Type:      smdType,
+				ItemsType: itemType,
+				Ref:       ref,
+			},
 		}
 	}
 
@@ -556,29 +568,34 @@ func parseType(expr ast.Expr) string {
 	}
 }
 
-func parseSMDType(expr ast.Expr) string {
+func parseSMDType(expr ast.Expr) (string, string) {
 	switch v := expr.(type) {
 	case *ast.StarExpr:
 		return parseSMDType(v.X)
 	case *ast.SelectorExpr, *ast.MapType, *ast.InterfaceType:
-		return "Object"
+		return "Object", ""
 	case *ast.ArrayType:
-		return "Array"
+		mainType, itemType := parseSMDType(v.Elt)
+		if itemType != "" {
+			return "Array", itemType
+		}
+
+		return "Array", mainType
 	case *ast.Ident:
 		switch v.Name {
 		case "bool":
-			return "Boolean"
+			return "Boolean", ""
 		case "string":
-			return "String"
+			return "String", ""
 		case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64", "uintptr", "byte", "rune":
-			return "Integer"
+			return "Integer", ""
 		case "float32", "float64", "complex64", "complex128":
-			return "Float"
+			return "Float", ""
 		default:
-			return "Object" // *ast.Ident contain type name, if type not basic then it struct or alias
+			return "Object", "" // *ast.Ident contain type name, if type not basic then it struct or alias
 		}
 	default:
-		return "Object" // default complex type is object
+		return "Object", "" // default complex type is object
 	}
 }
 
@@ -609,8 +626,9 @@ func parseStruct(expr ast.Expr) *Struct {
 		}
 
 		s := &Struct{
-			Name: v.Name,
-			Type: v.Name,
+			Name:      v.Name,
+			Namespace: ".",
+			Type:      v.Name,
 		}
 
 		if v.Obj != nil && v.Obj.Decl != nil {

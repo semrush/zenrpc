@@ -25,22 +25,29 @@ func main() {
 		filename = os.Getenv("GOFILE")
 	}
 
+	if len(filename) == 0 {
+		fmt.Fprintln(os.Stderr, "File path is empty")
+		os.Exit(1)
+	}
+
 	fmt.Printf("Entrypoint: %s\n", filename)
 
 	pi := parser.NewPackageInfo()
 	dir, err := pi.ParseFiles(filename)
 	if err != nil {
 		printError(err)
+		os.Exit(1)
 	}
 
 	if len(pi.Services) == 0 {
-		fmt.Printf("Services not found")
-		return
+		fmt.Fprintln(os.Stderr, "Services not found")
+		os.Exit(1)
 	}
 
 	outputFileName, err := generateFile(pi, dir)
 	if err != nil {
 		printError(err)
+		os.Exit(1)
 	}
 
 	fmt.Printf("Generated: %s\n", outputFileName)
@@ -59,8 +66,6 @@ func printError(err error) {
 	fmt.Printf("\t%s\n", openIssueURL)
 	fmt.Println("For more information, see:")
 	fmt.Printf("\t%s\n\n", githubURL)
-
-	os.Exit(1)
 }
 
 func generateFile(pi *parser.PackageInfo, dir string) (string, error) {
