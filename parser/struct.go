@@ -12,47 +12,43 @@ func (pi *PackageInfo) parseStructs() {
 	}
 }
 
-func (s *Struct) findTypeSpec(pi *PackageInfo) {
-	if s.TypeSpec != nil {
-		return
+func (s *Struct) findTypeSpec(pi *PackageInfo) bool {
+	if s.StructType != nil {
+		return true
 	}
 
 	for _, f := range pi.Scopes[s.Namespace] {
 		if obj, ok := f.Objects[s.Type]; ok && obj.Decl != nil {
 			if ts, ok := obj.Decl.(*ast.TypeSpec); ok {
-				s.TypeSpec = ts
-				return
+				if st, ok := ts.Type.(*ast.StructType); ok {
+					s.StructType = st
+					return true
+				}
 			}
 		}
 	}
+
+	return false
 }
 
 func (s *Struct) parse(pi *PackageInfo) error {
-	s.findTypeSpec(pi)
-
-	if s.TypeSpec == nil || s.Properties != nil {
+	if !s.findTypeSpec(pi) || s.Properties != nil {
 		// can't find struct implementation
 		// or struct already parsed
 		return nil
 	}
 
-	structType, ok := s.TypeSpec.Type.(*ast.StructType)
-	if !ok {
-		return nil
-	}
-
 	s.Properties = []Property{}
-	for _, field := range structType.Fields.List {
+	for _, field := range s.StructType.Fields.List {
 		if field.Names == nil {
 			continue
 		}
 
 		smdType, itemType := parseSMDType(field.Type)
 
-		// field with struct type
-		internalS := parseStruct(field.Type)
 		var ref string
-		if internalS != nil {
+		// field with struct type
+		if internalS := parseStruct(field.Type); internalS != nil {
 			// set right namespace for struct from another package
 			if internalS.Namespace == "." && s.Namespace != "." {
 				internalS.Namespace = s.Namespace
@@ -60,11 +56,28 @@ func (s *Struct) parse(pi *PackageInfo) error {
 			}
 
 			ref = internalS.Name
-			if currentS, ok := pi.Structs[internalS.Name]; !ok || currentS.TypeSpec != nil {
+			if currentS, ok := pi.Structs[internalS.Name]; !ok || currentS.StructType != nil {
 				pi.Structs[internalS.Name] = internalS
 			}
 
 			if err := internalS.parse(pi); err != nil {
+				return err
+			}
+		}
+
+		// parse inline struct
+		if inlineStructType, ok := field.Type.(*ast.StructType); ok {
+			// call struct by first property name
+			inlineS := &Struct{
+				Name:       s.Name + "_" + field.Names[0].Name,
+				Namespace:  s.Namespace,
+				Type:       s.Type + "_" + field.Names[0].Name,
+				StructType: inlineStructType,
+			}
+
+			pi.Structs[inlineS.Name] = inlineS
+			ref = inlineS.Name
+			if err := inlineS.parse(pi); err != nil {
 				return err
 			}
 		}

@@ -89,7 +89,7 @@ type Struct struct {
 	Name       string // key in map, Ref in arguments and returns
 	Namespace  string
 	Type       string
-	TypeSpec   *ast.TypeSpec
+	StructType *ast.StructType
 	Properties []Property // array because order is important
 }
 
@@ -374,7 +374,7 @@ func (m *Method) parseArguments(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNam
 		if s != nil {
 			ref = s.Name
 
-			if currentS, ok := pi.Structs[s.Name]; !ok || currentS.TypeSpec != nil {
+			if currentS, ok := pi.Structs[s.Name]; !ok || currentS.StructType != nil {
 				pi.Structs[s.Name] = s
 			}
 		}
@@ -457,7 +457,7 @@ func (m *Method) parseReturns(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNames
 		if s != nil {
 			ref = s.Name
 
-			if currentS, ok := pi.Structs[s.Name]; !ok || currentS.TypeSpec != nil {
+			if currentS, ok := pi.Structs[s.Name]; !ok || currentS.StructType != nil {
 				pi.Structs[s.Name] = s
 			}
 		}
@@ -639,7 +639,9 @@ func parseStruct(expr ast.Expr) *Struct {
 
 		if v.Obj != nil && v.Obj.Decl != nil {
 			if ts, ok := v.Obj.Decl.(*ast.TypeSpec); ok {
-				s.TypeSpec = ts
+				if st, ok := ts.Type.(*ast.StructType); ok {
+					s.StructType = st
+				}
 			}
 		}
 
