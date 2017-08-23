@@ -112,6 +112,10 @@ func (ArithService) SMD() smd.ServiceInfo {
 					Optional: true,
 					Type:     smd.Object,
 				},
+				Errors: map[int]string{
+					401:    "we do not serve 1",
+					-32603: "divide by zero",
+				},
 			},
 			"Pow": {
 				Description: `Pow returns x**y, the base-x exponential of y. If Exp is not set then default value is 2.`,
@@ -360,6 +364,9 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					Optional: true,
 					Type:     smd.Object,
 				},
+				Errors: map[int]string{
+					404: "person was not found",
+				},
 			},
 			"Delete": {
 				Description: `Delete marks person as deleted.`,
@@ -410,6 +417,10 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 				Returns: smd.JSONSchema{
 					Optional: false,
 					Type:     smd.Integer,
+				},
+				Errors: map[int]string{
+					400: "invalid request",
+					401: "use replace=true",
 				},
 			},
 		},

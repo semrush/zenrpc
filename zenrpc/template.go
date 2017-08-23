@@ -68,6 +68,13 @@ var RPC = struct {
 								{{- end}}
 							}, 
 						{{- end}}
+						{{- if .Errors}}
+							Errors: map[int]string{
+								{{- range .Errors }}
+									{{.Code}}: "{{.Description}}",
+								{{- end }}
+							},
+						{{- end}}
 					}, 
 				{{- end }}
 			},

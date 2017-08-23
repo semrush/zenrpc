@@ -53,6 +53,9 @@ type Service struct {
 	// Returns indicates the expected type of value returned from the method call.
 	// This value of this property should follow JSON Schema type definition.
 	Returns JSONSchema `json:"returns"`
+
+	// Errors describes error codes from JSON-RPC 2.0 Specification
+	Errors map[int]string `json:"errors"`
 }
 
 type JSONSchema struct {
