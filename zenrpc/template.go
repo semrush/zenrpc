@@ -20,90 +20,108 @@ import (
 
 var RPC = struct {
 {{ range .Services}}
-	{{.Name}} struct { {{range $i, $e := .Methods }}{{if $i}}, {{end}}{{.Name}}{{ end }} string } {{ end }}
-}{	{{ range .Services}}
-		{{.Name}}: struct { {{range $i, $e := .Methods }} {{if $i}}, {{end}}{{.Name}}{{ end }} string }{ {{range .Methods }}
-			{{.Name}}:   "{{.LowerCaseName}}",{{ end }}
-		}, 	{{ end }}
+	{{.Name}} struct { {{range $i, $e := .Methods }}{{if $i}}, {{end}}{{.Name}}{{ end }} string } 
+{{- end }}
+}{	
+	{{- range .Services}}
+		{{.Name}}: struct { {{range $i, $e := .Methods }} {{if $i}}, {{end}}{{.Name}}{{ end }} string }{ 
+			{{- range .Methods }}
+				{{.Name}}:   "{{.LowerCaseName}}",
+			{{- end }}
+		}, 	
+	{{- end }}
 }
 
 {{ range $s := .Services}}
-func ({{.Name}}) SMD() smd.ServiceInfo {
-	return smd.ServiceInfo{
-		Description: ` + "`{{.Description}}`" + `,
-		Methods: map[string]smd.Service{ {{ range .Methods }}
-			"{{.Name}}": {
-				Description: ` + "`{{.Description}}`" + `,
-				Parameters: []smd.JSONSchema{ {{ range .Args }}
-					{
-						Name: "{{.Name}}",
-						Optional: {{.HasStar}},
+
+	func ({{.Name}}) SMD() smd.ServiceInfo {
+		return smd.ServiceInfo{
+			Description: ` + "`{{.Description}}`" + `,
+			Methods: map[string]smd.Service{ 
+				{{- range .Methods }}
+					"{{.Name}}": {
 						Description: ` + "`{{.Description}}`" + `,
-						Type: smd.{{.SMDType.Type}}, {{ if eq .SMDType.Type "Array" }}
-						Items: map[string]string{
-							"type": smd.{{.SMDType.ItemsType}},
-						}, {{end}}
-					},
+						Parameters: []smd.JSONSchema{ 
+						{{- range .Args }}
+							{
+								Name: "{{.Name}}",
+								Optional: {{.HasStar}},
+								Description: ` + "`{{.Description}}`" + `,
+								Type: smd.{{.SMDType.Type}}, 
+								{{- if eq .SMDType.Type "Array" }}
+									Items: map[string]string{
+										"type": smd.{{.SMDType.ItemsType}},
+									}, 
+								{{- end}}
+							},
+						{{- end }}
+						}, 
+						{{- if .SMDReturn}}
+							Returns: smd.JSONSchema{ 
+								{{- if .SMDReturn.Description}}Description: ` + "`{{.SMDReturn.Description}}`" + `,{{end}}
+								Optional:    {{.SMDReturn.HasStar}},
+								Type: smd.{{.SMDReturn.SMDType.Type}}, 
+								{{- if eq .SMDReturn.SMDType.Type "Array" }}
+									Items: map[string]string{
+										"type": smd.{{.SMDReturn.SMDType.ItemsType}},
+									}, 
+								{{- end}}
+							}, 
+						{{- end}}
+					}, 
+				{{- end }}
+			},
+		}
+	}
 
+	// Invoke is as generated code from zenrpc cmd
+	func (s {{.Name}}) Invoke(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
+		resp := zenrpc.Response{}
+		var err error
+
+		switch method { 
+		{{- range .Methods }}
+			case RPC.{{$s.Name}}.{{.Name}}: {{ if .Args }}
+					var args = struct {
+						{{ range .Args }}
+							{{.CapitalName}} {{.Type}} ` + "`json:\"{{.JsonName}}\"`" + ` 
+						{{- end }}
+					}{}
+
+					if zenrpc.IsArray(params) {
+						if params, err = zenrpc.ConvertToObject([]string{ 
+							{{- range .Args }}"{{.JsonName}}",{{ end -}} 
+							}, params); err != nil {
+							return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+						}
+					}
+
+					if len(params) > 0 {
+						if err := json.Unmarshal(params, &args); err != nil {
+							return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+						}
+					}
+
+					{{ range .DefaultValues }}
+						{{.Comment}}
+						if args.{{.CapitalName}} == nil {
+							var v {{.Type}} = {{.Value}}
+							args.{{.CapitalName}} = &v
+						}
 					{{ end }}
-				}, {{if .SMDReturn}}
-				Returns: smd.JSONSchema{ {{if .SMDReturn.Description}}
-					Description: ` + "`{{.SMDReturn.Description}}`" + `,{{end}}
-					Optional:    {{.SMDReturn.HasStar}},
-					Type: smd.{{.SMDReturn.SMDType.Type}}, {{ if eq .SMDReturn.SMDType.Type "Array" }}
-					Items: map[string]string{
-						"type": smd.{{.SMDReturn.SMDType.ItemsType}},
-					}, {{end}}
-				}, {{end}}
-			}, {{ end }}
-		},
+
+				{{ end }} {{if .Returns}}
+					resp.Set(s.{{.Name}}({{if .HasContext}}ctx, {{end}} {{ range .Args }}args.{{.CapitalName}}, {{ end }}))
+				{{else}}
+					s.{{.Name}}({{if .HasContext}}ctx, {{end}} {{ range .Args }}args.{{.CapitalName}}, {{ end }})
+				{{end}}
+		{{- end }}
+		default:
+			resp = zenrpc.NewResponseError(nil, zenrpc.MethodNotFound, "", nil)
+		}
+
+		return resp
 	}
-}
-
-// Invoke is as generated code from zenrpc cmd
-func (s {{.Name}}) Invoke(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
-	resp := zenrpc.Response{}
-	var err error
-
-	switch method { {{range .Methods }}
-	case RPC.{{$s.Name}}.{{.Name}}: {{ if .Args }}
-			var args = struct {
-				{{ range .Args }}
-				{{.CapitalName}} {{.Type}} ` + "`json:\"{{.JsonName}}\"`" + ` {{ end }}
-			}{}
-
-			if zenrpc.IsArray(params) {
-				if params, err = zenrpc.ConvertToObject([]string{ {{ range .Args }}"{{.JsonName}}",{{ end }} }, params); err != nil {
-					return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
-				}
-			}
-
-			if len(params) > 0 {
-				if err := json.Unmarshal(params, &args); err != nil {
-					return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
-				}
-			}
-
-			{{ range .DefaultValues }}
-				{{.Comment}}
-				if args.{{.CapitalName}} == nil {
-					var v {{.Type}} = {{.Value}}
-					args.{{.CapitalName}} = &v
-				}
-			{{ end }}
-
-		{{ end }} {{if .Returns}}
-			resp.Set(s.{{.Name}}({{if .HasContext}}ctx, {{end}} {{ range .Args }}args.{{.CapitalName}}, {{ end }}))
-		{{else}}
-			s.{{.Name}}({{if .HasContext}}ctx, {{end}} {{ range .Args }}args.{{.CapitalName}}, {{ end }})
-		{{end}}
-	{{ end }}
-	default:
-		resp = zenrpc.NewResponseError(nil, zenrpc.MethodNotFound, "", nil)
-	}
-
-	return resp
-}
-{{ end }}
+{{- end }}
 `))
 )
