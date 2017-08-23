@@ -40,14 +40,35 @@ func (s *Struct) parse(pi *PackageInfo) error {
 
 	s.Properties = []Property{}
 	for _, field := range s.StructType.Fields.List {
+		// parse embedded struct
 		if field.Names == nil {
+			if embeddedS := parseStruct(field.Type); embeddedS != nil {
+				// set right namespace for struct from another package
+				if embeddedS.Namespace == "." && s.Namespace != "." {
+					embeddedS.Namespace = s.Namespace
+					embeddedS.Name = s.Namespace + "." + embeddedS.Type
+				}
+
+				if currentS, ok := pi.Structs[embeddedS.Name]; !ok || (currentS.StructType == nil && embeddedS.StructType != nil) {
+					pi.Structs[embeddedS.Name] = embeddedS
+				}
+
+				if err := embeddedS.parse(pi); err != nil {
+					return err
+				}
+
+				if embeddedS.Properties != nil && len(embeddedS.Properties) > 0 {
+					s.Properties = append(s.Properties, embeddedS.Properties...)
+				}
+			}
+
 			continue
 		}
 
 		smdType, itemType := parseSMDType(field.Type)
 
 		var ref string
-		// field with struct type
+		// parse field with struct type
 		if internalS := parseStruct(field.Type); internalS != nil {
 			// set right namespace for struct from another package
 			if internalS.Namespace == "." && s.Namespace != "." {
@@ -56,7 +77,7 @@ func (s *Struct) parse(pi *PackageInfo) error {
 			}
 
 			ref = internalS.Name
-			if currentS, ok := pi.Structs[internalS.Name]; !ok || currentS.StructType != nil {
+			if currentS, ok := pi.Structs[internalS.Name]; !ok || (currentS.StructType == nil && internalS.StructType != nil) {
 				pi.Structs[internalS.Name] = internalS
 			}
 

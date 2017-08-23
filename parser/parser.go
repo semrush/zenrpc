@@ -374,7 +374,7 @@ func (m *Method) parseArguments(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNam
 		if s != nil {
 			ref = s.Name
 
-			if currentS, ok := pi.Structs[s.Name]; !ok || currentS.StructType != nil {
+			if currentS, ok := pi.Structs[s.Name]; !ok || (currentS.StructType == nil && s.StructType != nil) {
 				pi.Structs[s.Name] = s
 			}
 		}
@@ -457,7 +457,7 @@ func (m *Method) parseReturns(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNames
 		if s != nil {
 			ref = s.Name
 
-			if currentS, ok := pi.Structs[s.Name]; !ok || currentS.StructType != nil {
+			if currentS, ok := pi.Structs[s.Name]; !ok || (currentS.StructType == nil && s.StructType != nil) {
 				pi.Structs[s.Name] = s
 			}
 		}
