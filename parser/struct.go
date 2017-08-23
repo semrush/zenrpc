@@ -30,8 +30,9 @@ func (s *Struct) findTypeSpec(pi *PackageInfo) {
 func (s *Struct) parse(pi *PackageInfo) error {
 	s.findTypeSpec(pi)
 
-	if s.TypeSpec == nil {
+	if s.TypeSpec == nil || s.Properties != nil {
 		// can't find struct implementation
+		// or struct already parsed
 		return nil
 	}
 
@@ -48,12 +49,12 @@ func (s *Struct) parse(pi *PackageInfo) error {
 
 		smdType, itemType := parseSMDType(field.Type)
 
-		// find and save struct
+		// field with struct type
 		internalS := parseStruct(field.Type)
 		var ref string
 		if internalS != nil {
 			// set right namespace for struct from another package
-			if internalS.Namespace == "." {
+			if internalS.Namespace == "." && s.Namespace != "." {
 				internalS.Namespace = s.Namespace
 				internalS.Name = s.Namespace + "." + internalS.Type
 			}
