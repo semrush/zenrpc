@@ -86,10 +86,17 @@ type SMDReturn struct {
 }
 
 type Struct struct {
-	Name      string // key in map, Ref in arguments and returns
-	Namespace string
-	Type      string
-	TypeSpec  *ast.TypeSpec
+	Name       string // key in map, Ref in arguments and returns
+	Namespace  string
+	Type       string
+	TypeSpec   *ast.TypeSpec
+	Properties []Property // array because order is important
+}
+
+type Property struct {
+	Name        string
+	Description string
+	SMDType     SMDType
 }
 
 type SMDType struct {
@@ -136,7 +143,6 @@ func (pi *PackageInfo) ParseFiles(filename string) (string, error) {
 	}
 
 	// TODO parse imports and find other scopes from other modules
-	pi.fillStructs()
 	pi.parseStructs()
 
 	return dir, nil
