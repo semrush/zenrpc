@@ -330,7 +330,6 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 						Optional:    false,
 						Description: ``,
 						Type:        smd.Object,
-
 						Properties: map[string]smd.Property{
 							"ByName": {
 								Description: `ByName is filter for searching person by first name or last name.`,
@@ -348,6 +347,20 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 								Description: ``,
 								Ref:         "#/definitions/Address",
 								Type:        smd.Object,
+							},
+						},
+						Definitions: map[string]smd.Definition{
+							"Address": {
+								Properties: map[string]smd.Property{
+									"Street": {
+										Description: ``,
+										Type:        smd.String,
+									},
+									"City": {
+										Description: ``,
+										Type:        smd.String,
+									},
+								},
 							},
 						},
 					},
@@ -371,6 +384,20 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					Items: map[string]string{
 						"$ref": "#/definitions/Person",
 					},
+					Definitions: map[string]smd.Definition{
+						"Address": {
+							Properties: map[string]smd.Property{
+								"Street": {
+									Description: ``,
+									Type:        smd.String,
+								},
+								"City": {
+									Description: ``,
+									Type:        smd.String,
+								},
+							},
+						},
+					},
 				},
 			},
 			"ValidateSearch": {
@@ -381,7 +408,6 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 						Optional:    true,
 						Description: ``,
 						Type:        smd.Object,
-
 						Properties: map[string]smd.Property{
 							"ByName": {
 								Description: `ByName is filter for searching person by first name or last name.`,
@@ -399,6 +425,20 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 								Description: ``,
 								Ref:         "#/definitions/Address",
 								Type:        smd.Object,
+							},
+						},
+						Definitions: map[string]smd.Definition{
+							"Address": {
+								Properties: map[string]smd.Property{
+									"Street": {
+										Description: ``,
+										Type:        smd.String,
+									},
+									"City": {
+										Description: ``,
+										Type:        smd.String,
+									},
+								},
 							},
 						},
 					},
@@ -424,6 +464,20 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 							Description: ``,
 							Ref:         "#/definitions/Address",
 							Type:        smd.Object,
+						},
+					},
+					Definitions: map[string]smd.Definition{
+						"Address": {
+							Properties: map[string]smd.Property{
+								"Street": {
+									Description: ``,
+									Type:        smd.String,
+								},
+								"City": {
+									Description: ``,
+									Type:        smd.String,
+								},
+							},
 						},
 					},
 				},
@@ -487,6 +541,20 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 							Type:        smd.Object,
 						},
 					},
+					Definitions: map[string]smd.Definition{
+						"Address": {
+							Properties: map[string]smd.Property{
+								"Street": {
+									Description: ``,
+									Type:        smd.String,
+								},
+								"City": {
+									Description: ``,
+									Type:        smd.String,
+								},
+							},
+						},
+					},
 				},
 				Errors: map[int]string{
 					404: "person was not found",
@@ -532,7 +600,6 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 						Optional:    false,
 						Description: ``,
 						Type:        smd.Object,
-
 						Properties: map[string]smd.Property{
 							"ID": {
 								Description: `ID is Unique Identifier for person`,
@@ -576,6 +643,20 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 								Description: ``,
 								Ref:         "#/definitions/Address",
 								Type:        smd.Object,
+							},
+						},
+						Definitions: map[string]smd.Definition{
+							"Address": {
+								Properties: map[string]smd.Property{
+									"Street": {
+										Description: ``,
+										Type:        smd.String,
+									},
+									"City": {
+										Description: ``,
+										Type:        smd.String,
+									},
+								},
 							},
 						},
 					},

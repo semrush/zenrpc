@@ -1,11 +1,14 @@
 package main
 
 import (
+	"github.com/sergeyfast/zenrpc/parser"
 	"text/template"
 )
 
 var (
-	serviceTemplate = template.Must(template.New("service").Parse(`
+	serviceTemplate = template.Must(template.New("service").
+		Funcs(template.FuncMap{"definitions": parser.Definitions}).
+		Parse(`
 {{define "smdType" -}}
 	Type: smd.{{.Type}},
 	{{- if eq .Type "Array" }}
@@ -17,10 +20,9 @@ var (
 			{{end}}
 		},
 	{{- end}}
-{{end}}
+{{- end}}
 
-
-{{define "Properties" -}}
+{{define "properties" -}}
 	Properties: map[string]smd.Property{
 	{{range $i, $e := . -}}
 		"{{.Name}}": {
@@ -29,10 +31,21 @@ var (
 				Ref: "#/definitions/{{.SMDType.Ref}}",
 			{{- end}}			
 			{{template "smdType" .SMDType}}
-			
 		},
 	{{ end }}
 	},
+{{- end}}
+
+{{define "definitions" -}}
+	{{if .}}
+	Definitions: map[string]smd.Definition{
+		{{- range $name, $struct := .}}
+			"{{ $name}}": {
+				{{ template "properties" .Properties}}
+			},
+		{{ end }}
+	},
+	{{ end }}
 {{- end}}
 
 
@@ -79,8 +92,9 @@ var RPC = struct {
 								Description: ` + "`{{.Description}}`" + `,
 								{{template "smdType" .SMDType}}
 								{{- if and (eq .SMDType.Type "Object") (ne .SMDType.Ref "")}}
-									{{ template "Properties" (index $.Structs .SMDType.Ref).Properties}}
+									{{ template "properties" (index $.Structs .SMDType.Ref).Properties}}
 								{{- end}}
+								{{- template "definitions" definitions .SMDType $.Structs }}
 							},
 						{{- end }}
 						}, 
@@ -90,8 +104,9 @@ var RPC = struct {
 								Optional:    {{.SMDReturn.HasStar}},
 								{{template "smdType" .SMDReturn.SMDType }}
 								{{- if and (eq .SMDReturn.SMDType.Type "Object") (ne .SMDReturn.SMDType.Ref "")}}
-									{{- template "Properties" (index $.Structs .SMDReturn.SMDType.Ref).Properties}}
+									{{ template "properties" (index $.Structs .SMDReturn.SMDType.Ref).Properties}}
 								{{- end}}
+								{{- template "definitions" definitions .SMDReturn.SMDType $.Structs }}							
 							}, 
 						{{- end}}
 						{{- if .Errors}}

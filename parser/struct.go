@@ -150,3 +150,33 @@ func parseJsonTag(bl *ast.BasicLit) string {
 
 	return tag
 }
+
+func Definitions(smdType SMDType, structs map[string]*Struct) map[string]*Struct {
+	if smdType.Ref == "" {
+		return nil
+	}
+
+	names := definitions(smdType, structs)
+	result := make(map[string]*Struct)
+	for _, name := range names {
+		if s, ok := structs[name]; ok {
+			result[name] = s
+		}
+	}
+
+	return result
+}
+
+func definitions(smdType SMDType, structs map[string]*Struct) []string {
+	result := []string{}
+	if s, ok := structs[smdType.Ref]; ok {
+		for _, p := range s.Properties {
+			if p.SMDType.Ref != "" {
+				result = append(result, p.SMDType.Ref)
+				result = append(result, definitions(p.SMDType, structs)...)
+			}
+		}
+	}
+
+	return result
+}
