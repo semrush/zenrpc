@@ -55,16 +55,18 @@ func (ArithService) SMD() smd.ServiceInfo {
 					},
 				},
 				Returns: smd.JSONSchema{
-					Optional: false,
-					Type:     smd.Boolean,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Boolean,
 				},
 			},
 			"Positive": {
 				Description: ``,
 				Parameters:  []smd.JSONSchema{},
 				Returns: smd.JSONSchema{
-					Optional: false,
-					Type:     smd.Boolean,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Boolean,
 				},
 			},
 			"DoSomething": {
@@ -88,8 +90,9 @@ func (ArithService) SMD() smd.ServiceInfo {
 					},
 				},
 				Returns: smd.JSONSchema{
-					Optional: false,
-					Type:     smd.Integer,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Integer,
 				},
 			},
 			"Divide": {
@@ -109,8 +112,19 @@ func (ArithService) SMD() smd.ServiceInfo {
 					},
 				},
 				Returns: smd.JSONSchema{
-					Optional: true,
-					Type:     smd.Object,
+					Description: ``,
+					Optional:    true,
+					Type:        smd.Object,
+					Properties: map[string]smd.Property{
+						"Quo": {
+							Description: `Quo docs`,
+							Type:        smd.Integer,
+						},
+						"rem": {
+							Description: `Rem docs`,
+							Type:        smd.Integer,
+						},
+					},
 				},
 				Errors: map[int]string{
 					401:    "we do not serve 1",
@@ -134,16 +148,18 @@ func (ArithService) SMD() smd.ServiceInfo {
 					},
 				},
 				Returns: smd.JSONSchema{
-					Optional: false,
-					Type:     smd.Float,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Float,
 				},
 			},
 			"Pi": {
 				Description: `PI returns math.Pi.`,
 				Parameters:  []smd.JSONSchema{},
 				Returns: smd.JSONSchema{
-					Optional: false,
-					Type:     smd.Float,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Float,
 				},
 			},
 			"SumArray": {
@@ -160,8 +176,9 @@ func (ArithService) SMD() smd.ServiceInfo {
 					},
 				},
 				Returns: smd.JSONSchema{
-					Optional: false,
-					Type:     smd.Float,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Float,
 				},
 			},
 		},
@@ -313,6 +330,26 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 						Optional:    false,
 						Description: ``,
 						Type:        smd.Object,
+
+						Properties: map[string]smd.Property{
+							"ByName": {
+								Description: `ByName is filter for searching person by first name or last name.`,
+								Type:        smd.String,
+							},
+							"ByType": {
+								Description: ``,
+								Type:        smd.String,
+							},
+							"ByPhone": {
+								Description: ``,
+								Type:        smd.String,
+							},
+							"ByAddress": {
+								Description: ``,
+								Ref:         "#/definitions/Address",
+								Type:        smd.Object,
+							},
+						},
 					},
 					{
 						Name:        "page",
@@ -328,10 +365,11 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					},
 				},
 				Returns: smd.JSONSchema{
-					Optional: false,
-					Type:     smd.Array,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Array,
 					Items: map[string]string{
-						"type": smd.Object,
+						"$ref": "#/definitions/Person",
 					},
 				},
 			},
@@ -343,11 +381,51 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 						Optional:    true,
 						Description: ``,
 						Type:        smd.Object,
+
+						Properties: map[string]smd.Property{
+							"ByName": {
+								Description: `ByName is filter for searching person by first name or last name.`,
+								Type:        smd.String,
+							},
+							"ByType": {
+								Description: ``,
+								Type:        smd.String,
+							},
+							"ByPhone": {
+								Description: ``,
+								Type:        smd.String,
+							},
+							"ByAddress": {
+								Description: ``,
+								Ref:         "#/definitions/Address",
+								Type:        smd.Object,
+							},
+						},
 					},
 				},
 				Returns: smd.JSONSchema{
-					Optional: true,
-					Type:     smd.Object,
+					Description: ``,
+					Optional:    true,
+					Type:        smd.Object,
+					Properties: map[string]smd.Property{
+						"ByName": {
+							Description: `ByName is filter for searching person by first name or last name.`,
+							Type:        smd.String,
+						},
+						"ByType": {
+							Description: ``,
+							Type:        smd.String,
+						},
+						"ByPhone": {
+							Description: ``,
+							Type:        smd.String,
+						},
+						"ByAddress": {
+							Description: ``,
+							Ref:         "#/definitions/Address",
+							Type:        smd.Object,
+						},
+					},
 				},
 			},
 			"ById": {
@@ -361,8 +439,54 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					},
 				},
 				Returns: smd.JSONSchema{
-					Optional: true,
-					Type:     smd.Object,
+					Description: ``,
+					Optional:    true,
+					Type:        smd.Object,
+					Properties: map[string]smd.Property{
+						"ID": {
+							Description: `ID is Unique Identifier for person`,
+							Type:        smd.Integer,
+						},
+						"FirstName": {
+							Description: ``,
+							Type:        smd.String,
+						},
+						"LastName": {
+							Description: ``,
+							Type:        smd.String,
+						},
+						"Phone": {
+							Description: `Phone is main phone`,
+							Type:        smd.String,
+						},
+						"WorkPhone": {
+							Description: ``,
+							Type:        smd.String,
+						},
+						"Mobile": {
+							Description: ``,
+							Type:        smd.Array,
+							Items: map[string]string{
+								"type": smd.String,
+							},
+						},
+						"Deleted": {
+							Description: `Deleted is flag for`,
+							Type:        smd.Boolean,
+						},
+						"Addresses": {
+							Description: `Addresses Could be nil or len() == 0.`,
+							Type:        smd.Array,
+							Items: map[string]string{
+								"$ref": "#/definitions/Address",
+							},
+						},
+						"address": {
+							Description: ``,
+							Ref:         "#/definitions/Address",
+							Type:        smd.Object,
+						},
+					},
 				},
 				Errors: map[int]string{
 					404: "person was not found",
@@ -379,8 +503,9 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					},
 				},
 				Returns: smd.JSONSchema{
-					Optional: false,
-					Type:     smd.Boolean,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Boolean,
 				},
 			},
 			"Remove": {
@@ -393,9 +518,10 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 						Type:        smd.Integer,
 					},
 				},
-				Returns: smd.JSONSchema{Description: `operation result`,
-					Optional: false,
-					Type:     smd.Boolean,
+				Returns: smd.JSONSchema{
+					Description: `operation result`,
+					Optional:    false,
+					Type:        smd.Boolean,
 				},
 			},
 			"Save": {
@@ -406,6 +532,52 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 						Optional:    false,
 						Description: ``,
 						Type:        smd.Object,
+
+						Properties: map[string]smd.Property{
+							"ID": {
+								Description: `ID is Unique Identifier for person`,
+								Type:        smd.Integer,
+							},
+							"FirstName": {
+								Description: ``,
+								Type:        smd.String,
+							},
+							"LastName": {
+								Description: ``,
+								Type:        smd.String,
+							},
+							"Phone": {
+								Description: `Phone is main phone`,
+								Type:        smd.String,
+							},
+							"WorkPhone": {
+								Description: ``,
+								Type:        smd.String,
+							},
+							"Mobile": {
+								Description: ``,
+								Type:        smd.Array,
+								Items: map[string]string{
+									"type": smd.String,
+								},
+							},
+							"Deleted": {
+								Description: `Deleted is flag for`,
+								Type:        smd.Boolean,
+							},
+							"Addresses": {
+								Description: `Addresses Could be nil or len() == 0.`,
+								Type:        smd.Array,
+								Items: map[string]string{
+									"$ref": "#/definitions/Address",
+								},
+							},
+							"address": {
+								Description: ``,
+								Ref:         "#/definitions/Address",
+								Type:        smd.Object,
+							},
+						},
 					},
 					{
 						Name:        "replace",
@@ -415,8 +587,9 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					},
 				},
 				Returns: smd.JSONSchema{
-					Optional: false,
-					Type:     smd.Integer,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Integer,
 				},
 				Errors: map[int]string{
 					400: "invalid request",
