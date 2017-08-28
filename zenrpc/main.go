@@ -51,7 +51,7 @@ func main() {
 	}
 
 	fmt.Printf("Generated: %s\n", outputFileName)
-	fmt.Printf("Duration: %s\n", time.Since(start))
+	fmt.Printf("Duration: %dms\n", int64(time.Since(start)/time.Millisecond))
 	fmt.Println()
 	fmt.Print(pi)
 	fmt.Println()

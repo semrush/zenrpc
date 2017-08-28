@@ -33,6 +33,7 @@ type PackageInfo struct {
 
 	Scopes  map[string][]*ast.Scope // key - import name, value - array of scopes from each package file
 	Structs map[string]*Struct
+	Imports []*ast.ImportSpec
 }
 
 type Service struct {
@@ -117,6 +118,7 @@ func NewPackageInfo() *PackageInfo {
 
 		Scopes:  make(map[string][]*ast.Scope),
 		Structs: make(map[string]*Struct),
+		Imports: []*ast.ImportSpec{},
 	}
 }
 
@@ -147,7 +149,11 @@ func (pi *PackageInfo) ParseFiles(filename string) (string, error) {
 		}
 	}
 
-	// TODO parse imports and find other scopes from other modules
+	// collect scopes from imported packages
+	if err := pi.parseImports(uniqueImports(pi.Imports), dir); err != nil {
+		return dir, err
+	}
+
 	pi.parseStructs()
 
 	return dir, nil
@@ -177,8 +183,8 @@ func (pi *PackageInfo) parseFile(filename string) error {
 		return err
 	}
 
-	// collect current package scopes
-	pi.Scopes["."] = append(pi.Scopes["."], f.Scope)
+	pi.Scopes["."] = append(pi.Scopes["."], f.Scope) // collect current package scopes
+	pi.Imports = append(pi.Imports, f.Imports...)    // collect imports
 
 	return nil
 }

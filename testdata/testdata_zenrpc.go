@@ -11,18 +11,19 @@ import (
 )
 
 var RPC = struct {
-	ArithService struct{ Sum, Positive, DoSomething, Multiply, Divide, Pow, Pi, SumArray string }
+	ArithService struct{ Sum, Positive, DoSomething, DoSomethingWithPoint, Multiply, Divide, Pow, Pi, SumArray string }
 	PhoneBook    struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }
 }{
-	ArithService: struct{ Sum, Positive, DoSomething, Multiply, Divide, Pow, Pi, SumArray string }{
-		Sum:         "sum",
-		Positive:    "positive",
-		DoSomething: "dosomething",
-		Multiply:    "multiply",
-		Divide:      "divide",
-		Pow:         "pow",
-		Pi:          "pi",
-		SumArray:    "sumarray",
+	ArithService: struct{ Sum, Positive, DoSomething, DoSomethingWithPoint, Multiply, Divide, Pow, Pi, SumArray string }{
+		Sum:                  "sum",
+		Positive:             "positive",
+		DoSomething:          "dosomething",
+		DoSomethingWithPoint: "dosomethingwithpoint",
+		Multiply:             "multiply",
+		Divide:               "divide",
+		Pow:                  "pow",
+		Pi:                   "pi",
+		SumArray:             "sumarray",
 	},
 	PhoneBook: struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }{
 		Get:            "get",
@@ -72,6 +73,27 @@ func (ArithService) SMD() smd.ServiceInfo {
 			"DoSomething": {
 				Description: ``,
 				Parameters:  []smd.JSONSchema{},
+			},
+			"DoSomethingWithPoint": {
+				Description: ``,
+				Parameters: []smd.JSONSchema{
+					{
+						Name:        "p",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Object,
+						Properties: map[string]smd.Property{
+							"X": {
+								Description: `coordinate`,
+								Type:        smd.Integer,
+							},
+							"Y": {
+								Description: `coordinate`,
+								Type:        smd.Integer,
+							},
+						},
+					},
+				},
 			},
 			"Multiply": {
 				Description: `Multiply multiples two digits and returns result.`,
@@ -216,6 +238,25 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 	case RPC.ArithService.DoSomething:
 		s.DoSomething()
+
+	case RPC.ArithService.DoSomethingWithPoint:
+		var args = struct {
+			P model.Point `json:"p"`
+		}{}
+
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"p"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		s.DoSomethingWithPoint(args.P)
 
 	case RPC.ArithService.Multiply:
 		var args = struct {
