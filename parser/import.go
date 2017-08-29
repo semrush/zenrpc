@@ -11,17 +11,10 @@ import (
 
 func (pi *PackageInfo) parseImports(imports []*ast.ImportSpec, dir string) error {
 	for _, i := range imports {
-		path := i.Path.Value[1 : len(i.Path.Value)-1] // remove quotes ""
-		name := ""
-		if i.Name != nil {
-			name = i.Name.Name
-		} else {
-			name = path[strings.LastIndex(path, "/")+1:]
-		}
-
+		name, path := importNamePath(i)
 		realPath := tryFindPath(path, dir)
-		// can't find path to package
 		if realPath == "" {
+			// can't find path to package
 			continue
 		}
 
@@ -59,11 +52,23 @@ func (pi *PackageInfo) parseImports(imports []*ast.ImportSpec, dir string) error
 			return err
 		}
 	}
+
 	return nil
 }
 
+func importNamePath(i *ast.ImportSpec) (name, path string) {
+	path = i.Path.Value[1 : len(i.Path.Value)-1] // remove quotes ""
+	if i.Name != nil {
+		name = i.Name.Name
+	} else {
+		name = path[strings.LastIndex(path, "/")+1:]
+	}
+
+	return
+}
+
 func uniqueImports(in []*ast.ImportSpec) (out []*ast.ImportSpec) {
-	set := map[string]struct{}{}
+	set := make(map[string]struct{})
 	for _, i := range in {
 		key := i.Path.Value
 		if i.Name != nil {
@@ -73,6 +78,18 @@ func uniqueImports(in []*ast.ImportSpec) (out []*ast.ImportSpec) {
 		if _, ok := set[key]; !ok {
 			out = append(out, i)
 			set[key] = struct{}{}
+		}
+	}
+
+	return
+}
+
+// filterImports filter imports by namespace in structs
+func filterImports(in []*ast.ImportSpec, names map[string]struct{}) (out []*ast.ImportSpec) {
+	for _, i := range in {
+		name, _ := importNamePath(i)
+		if _, ok := names[name]; ok {
+			out = append(out, i)
 		}
 	}
 

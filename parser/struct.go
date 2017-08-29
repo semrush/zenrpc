@@ -180,3 +180,16 @@ func definitions(smdType SMDType, structs map[string]*Struct) []string {
 
 	return result
 }
+
+func uniqueStructsNamespaces(structs map[string]*Struct) (set map[string]struct{}) {
+	set = make(map[string]struct{})
+	for _, s := range structs {
+		if s.Namespace != "" {
+			if _, ok := set[s.Namespace]; !ok {
+				set[s.Namespace] = struct{}{}
+			}
+		}
+	}
+
+	return
+}

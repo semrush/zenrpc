@@ -150,7 +150,9 @@ func (pi *PackageInfo) ParseFiles(filename string) (string, error) {
 	}
 
 	// collect scopes from imported packages
-	if err := pi.parseImports(uniqueImports(pi.Imports), dir); err != nil {
+	pi.Imports = uniqueImports(pi.Imports)
+	pi.Imports = filterImports(pi.Imports, uniqueStructsNamespaces(pi.Structs))
+	if err := pi.parseImports(pi.Imports, dir); err != nil {
 		return dir, err
 	}
 
