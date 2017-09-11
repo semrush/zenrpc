@@ -140,11 +140,3 @@ All comments are optional.
    * [x] Basic support
    * [x] Metrics
    * [x] Logging
-
-# License
-
-TODO
-
-# Contributors
-
-TODO
