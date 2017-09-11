@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/sergeyfast/zenrpc/parser"
+	"github.com/semrush/zenrpc/parser"
 	"text/template"
 )
 
