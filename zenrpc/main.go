@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/sergeyfast/zenrpc/parser"
+	"github.com/semrush/zenrpc/parser"
 	"go/format"
 	"os"
 	"path/filepath"
@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	openIssueURL = "https://github.com/sergeyfast/zenrpc/issues/new"
-	githubURL    = "https://github.com/sergeyfast/zenrpc"
+	openIssueURL = "https://github.com/semrush/zenrpc/issues/new"
+	githubURL    = "https://github.com/semrush/zenrpc"
 )
 
 func main() {

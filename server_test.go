@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sergeyfast/zenrpc"
-	"github.com/sergeyfast/zenrpc/testdata"
+	"github.com/semrush/zenrpc"
+	"github.com/semrush/zenrpc/testdata"
 )
 
 // ArithService description goes here.

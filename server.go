@@ -11,7 +11,7 @@ import (
 	"sync"
 	"unicode"
 
-	"github.com/sergeyfast/zenrpc/smd"
+	"github.com/semrush/zenrpc/smd"
 )
 
 type contextKey string

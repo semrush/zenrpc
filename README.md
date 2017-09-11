@@ -1,6 +1,6 @@
 # zenrpc: JSON-RPC 2.0 Server Implementation with SMD support [WIP]
 
-[![goreport](https://goreportcard.com/badge/github.com/sergeyfast/zenrpc)](https://goreportcard.com/report/github.com/sergeyfast/zenrpc) [![Build Status](https://travis-ci.org/sergeyfast/zenrpc.svg?branch=master)](https://travis-ci.org/sergeyfast/zenrpc)
+[![goreport](https://goreportcard.com/badge/github.com/semrush/zenrpc)](https://goreportcard.com/report/github.com/semrush/zenrpc) [![Build Status](https://travis-ci.org/semrush/zenrpc.svg?branch=master)](https://travis-ci.org/semrush/zenrpc)
 
 `zenrpc` is a JSON-RPC 2.0 server library with Service Mapping Description support. 
 It's built on top of `go generate` instead of reflection. 
@@ -9,8 +9,8 @@ It's built on top of `go generate` instead of reflection.
 
 ```Service is struct with RPC methods, service represents RPC namespace.```
 
-  1. Install zenrpc generator `go get github.com/sergeyfast/zenrpc/zenrpc`
-  1. Import `github.com/sergeyfast/zenrpc` into our code with rpc service.
+  1. Install zenrpc generator `go get github.com/semrush/zenrpc/zenrpc`
+  1. Import `github.com/semrush/zenrpc` into our code with rpc service.
   1. Add trailing comment `//zenrpc` to your service or embed `zenrpc.Service` into your service struct.
   1. Write your funcs almost as usual.
   1. Do not forget run `go generate` or `zenrpc` for magic
@@ -38,8 +38,8 @@ import (
 	"net/http"
 	"os"	
 	
-	"github.com/sergeyfast/zenrpc"
-	"github.com/sergeyfast/zenrpc/testdata"
+	"github.com/semrush/zenrpc"
+	"github.com/semrush/zenrpc/testdata"
 )
 
 type ArithService struct{ zenrpc.Service }

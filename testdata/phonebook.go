@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/sergeyfast/zenrpc"
+	"github.com/semrush/zenrpc"
 	"sync"
 )
 

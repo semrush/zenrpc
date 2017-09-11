@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sergeyfast/zenrpc"
-	"github.com/sergeyfast/zenrpc/testdata"
+	"github.com/semrush/zenrpc"
+	"github.com/semrush/zenrpc/testdata"
 	"log"
 	"net/http"
 	"os"

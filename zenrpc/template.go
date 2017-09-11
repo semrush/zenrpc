@@ -14,8 +14,8 @@ import (
 	"encoding/json"
 	"context"
 
-	"github.com/sergeyfast/zenrpc"
-	"github.com/sergeyfast/zenrpc/smd"
+	"github.com/semrush/zenrpc"
+	"github.com/semrush/zenrpc/smd"
 )
 
 var RPC = struct {
