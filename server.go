@@ -5,14 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
 	"unicode"
 
-	"github.com/semrush/zenrpc/smd"
 	"github.com/gorilla/websocket"
+	"github.com/semrush/zenrpc/smd"
 )
 
 type contextKey string
@@ -65,6 +64,9 @@ type Options struct {
 
 	// AllowCORS adds header Access-Control-Allow-Origin with *.
 	AllowCORS bool
+
+	// Upgrader sets options for gorilla websocket. If nil, default options will be used
+	Upgrader *websocket.Upgrader
 }
 
 // Server is JSON-RPC 2.0 Server.
@@ -72,6 +74,7 @@ type Server struct {
 	services   map[string]Invoker
 	options    Options
 	middleware []MiddlewareFunc
+	logger     Printer
 }
 
 // NewServer returns new JSON-RPC 2.0 Server.
@@ -83,6 +86,12 @@ func NewServer(opts Options) Server {
 
 	if opts.TargetURL == "" {
 		opts.TargetURL = defaultTargetURL
+	}
+
+	if opts.Upgrader == nil {
+		opts.Upgrader = &websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool { return opts.AllowCORS },
+		}
 	}
 
 	return Server{
@@ -99,6 +108,11 @@ func (s *Server) Use(m ...MiddlewareFunc) {
 // Register registers new service for given namespace. For public namespace use empty string.
 func (s *Server) Register(namespace string, service Invoker) {
 	s.services[namespace] = service
+}
+
+// SetLogger sets logger for debug
+func (s *Server) SetLogger(printer Printer) {
+	s.logger = printer
 }
 
 // process process JSON-RPC 2.0 message, invokes correct method for namespace and returns JSON-RPC 2.0 Response.
@@ -143,6 +157,8 @@ func (s Server) processBatch(ctx context.Context, requests []Request) []Response
 
 	// running requests in batch asynchronously
 	respChan := make(chan Response, reqLen)
+	defer close(respChan)
+
 	var wg sync.WaitGroup
 	wg.Add(reqLen)
 
@@ -162,7 +178,6 @@ func (s Server) processBatch(ctx context.Context, requests []Request) []Response
 
 	// waiting to complete
 	wg.Wait()
-	close(respChan)
 
 	// collecting responses
 	responses := make([]Response, 0, reqLen)
@@ -212,98 +227,9 @@ func (s Server) processRequest(ctx context.Context, req Request) Response {
 	return resp
 }
 
-// ServeHTTP process JSON-RPC 2.0 requests via HTTP.
-// http://www.simple-is-better.org/json-rpc/transport_http.html
-func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// check for smd parameter and server settings and write schema if all conditions met,
-	if _, ok := r.URL.Query()["smd"]; ok && s.options.ExposeSMD && r.Method == http.MethodGet {
-		b, _ := json.Marshal(s.SMD())
-		w.Write(b)
-		return
-	}
-
-	// check for content-type and POST method.
-	if !s.options.DisableTransportChecks {
-		if r.Header.Get("Content-Type") != contentTypeJSON {
-			w.WriteHeader(http.StatusUnsupportedMediaType)
-			return
-		} else if r.Method == http.MethodGet {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		} else if r.Method != http.MethodPost {
-			// skip rpc calls
-			return
-		}
-	}
-
-	// ok, method is POST and content-type is application/json, process body
-	b, err := ioutil.ReadAll(r.Body)
-	var data interface{}
-
-	if err != nil {
-		data = NewResponseError(nil, ParseError, "", nil)
-	} else {
-		data = s.process(newRequestContext(r.Context(), r), b)
-	}
-
-	// if responses is empty -> all requests are notifications -> exit immediately
-	if data == nil {
-		return
-	}
-
-	// set headers
-	w.Header().Set("Content-Type", contentTypeJSON)
-	if s.options.AllowCORS {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-	}
-
-	// marshals data and write it to client.
-	if resp, err := json.Marshal(data); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-	} else if _, err := w.Write(resp); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-
-	return
-}
-
-// TODO Move ws to separate file?
-var upgrader = websocket.Upgrader{}
-
-// ServeWS processes JSON-RPC 2.0 requests via Gorilla WebSocket.
-// https://github.com/gorilla/websocket/blob/master/examples/echo/
-func (s Server) ServeWS(w http.ResponseWriter, r *http.Request) {
-	c, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		// TODO Errors
-		// w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer c.Close()
-
-	for {
-		mt, message, err := c.ReadMessage()
-		// TODO Handle all close error (GoingAway, Abnormal etc.)
-		if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-			break
-		}
-		if err != nil {
-			// TODO Errors
-			// w.WriteHeader(http.StatusInternalServerError)
-			break
-		}
-
-		// TODO Errors
-		data, err := json.Marshal(s.process(newRequestContext(r.Context(), r), message))
-		if err != nil {
-			// w.WriteHeader(http.StatusInternalServerError)
-		}
-
-		if err = c.WriteMessage(mt, data); err != nil {
-			// TODO Errors
-			// w.WriteHeader(http.StatusInternalServerError)
-			break
-		}
+func (s Server) printf(format string, v ...interface{}) {
+	if s.logger != nil {
+		s.logger.Printf(format, v...)
 	}
 }
 
@@ -361,7 +287,7 @@ func ConvertToObject(keys []string, params json.RawMessage) (json.RawMessage, er
 
 	rawParamCount := len(rawParams)
 	if paramCount < rawParamCount {
-		return nil, fmt.Errorf("Invalid params number, expected %d, got %d", paramCount, len(rawParams))
+		return nil, fmt.Errorf("invalid params number, expected %d, got %d", paramCount, len(rawParams))
 	}
 
 	buf := bytes.Buffer{}
@@ -418,21 +344,4 @@ func NamespaceFromContext(ctx context.Context) string {
 	}
 
 	return ""
-}
-
-// SMDBoxHandler is a handler for SMDBox web app.
-func SMDBoxHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>SMD Box</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/latest/css/bootstrap.min.css">
-<link href="https://cdn.jsdelivr.net/gh/mikhail-eremin/smd-box@latest/dist/app.css" rel="stylesheet"></head>
-<body>
-<div id="json-rpc-root"></div>
-<script type="text/javascript" src="https://cdn.jsdelivr.net/gh/mikhail-eremin/smd-box@latest/dist/app.js"></script></body>
-</html>
-	`))
 }

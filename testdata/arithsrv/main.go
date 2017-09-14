@@ -2,12 +2,13 @@ package main
 
 import (
 	"flag"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/semrush/zenrpc"
-	"github.com/semrush/zenrpc/testdata"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/semrush/zenrpc"
+	"github.com/semrush/zenrpc/testdata"
 )
 
 func main() {
@@ -28,7 +29,10 @@ func main() {
 	rpc.Use(zenrpc.Logger(log.New(os.Stderr, "", log.LstdFlags)))
 	rpc.Use(zenrpc.Metrics(""), testdata.SerialPeopleAccess(phonebook))
 
+	rpc.SetLogger(log.New(os.Stderr, "A", log.LstdFlags))
+
 	http.Handle("/", rpc)
+	http.HandleFunc("/ws", rpc.ServeWS)
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/doc", zenrpc.SMDBoxHandler)
 
