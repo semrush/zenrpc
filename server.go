@@ -157,7 +157,6 @@ func (s Server) processBatch(ctx context.Context, requests []Request) []Response
 
 	// running requests in batch asynchronously
 	respChan := make(chan Response, reqLen)
-	defer close(respChan)
 
 	var wg sync.WaitGroup
 	wg.Add(reqLen)
@@ -178,6 +177,7 @@ func (s Server) processBatch(ctx context.Context, requests []Request) []Response
 
 	// waiting to complete
 	wg.Wait()
+	close(respChan)
 
 	// collecting responses
 	responses := make([]Response, 0, reqLen)
