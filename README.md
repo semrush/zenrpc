@@ -125,8 +125,8 @@ All comments are optional.
     * [x] Default values
   * [x] SMD Schema
     * [x] Input
-    * [ ] Output
-    * [ ] Codes
+    * [x] Output
+    * [x] Codes
     * [ ] Scopes for OAuth
 
 # Server Library Features

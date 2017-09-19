@@ -59,6 +59,10 @@ import (
 
 	"github.com/semrush/zenrpc"
 	"github.com/semrush/zenrpc/smd"
+
+	{{ range .Imports}}
+		{{if .Name}}{{.Name.Name}} {{end}}{{.Path.Value}}
+	{{- end }}
 )
 
 var RPC = struct {

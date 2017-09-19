@@ -8,6 +8,8 @@ import (
 
 	"github.com/semrush/zenrpc"
 	"github.com/semrush/zenrpc/smd"
+
+	"github.com/semrush/zenrpc/testdata/model"
 )
 
 var RPC = struct {
