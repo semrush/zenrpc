@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/semrush/zenrpc"
+	"github.com/semrush/zenrpc/testdata/model"
 	"math"
 )
 
@@ -21,6 +22,10 @@ func (as ArithService) Positive() (bool, *zenrpc.Error) {
 }
 
 func (ArithService) DoSomething() {
+	// some optimistic operations
+}
+
+func (ArithService) DoSomethingWithPoint(p model.Point) {
 	// some optimistic operations
 }
 

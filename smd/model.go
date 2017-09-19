@@ -53,6 +53,9 @@ type Service struct {
 	// Returns indicates the expected type of value returned from the method call.
 	// This value of this property should follow JSON Schema type definition.
 	Returns JSONSchema `json:"returns"`
+
+	// Errors describes error codes from JSON-RPC 2.0 Specification
+	Errors map[int]string `json:"errors,omitempty"`
 }
 
 type JSONSchema struct {
@@ -65,7 +68,7 @@ type JSONSchema struct {
 	Type        string                `json:"type,omitempty"`
 	Optional    bool                  `json:"optional,omitempty"`
 	Default     *json.RawMessage      `json:"default,omitempty"`
-	Description string                `json:"description"`
+	Description string                `json:"description,omitempty"`
 	Properties  map[string]Property   `json:"properties,omitempty"`
 	Definitions map[string]Definition `json:"definitions,omitempty"`
 	Items       map[string]string     `json:"items,omitempty"`
@@ -73,9 +76,10 @@ type JSONSchema struct {
 
 type Property struct {
 	Type        string                `json:"type,omitempty"`
-	Description string                `json:"description"`
+	Description string                `json:"description,omitempty"`
 	Items       map[string]string     `json:"items,omitempty"`
 	Definitions map[string]Definition `json:"definitions,omitempty"`
+	Ref         string                `json:"$ref,omitempty"`
 }
 
 type Definition struct {

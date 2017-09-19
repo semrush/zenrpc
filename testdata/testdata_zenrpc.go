@@ -8,21 +8,24 @@ import (
 
 	"github.com/semrush/zenrpc"
 	"github.com/semrush/zenrpc/smd"
+
+	"github.com/semrush/zenrpc/testdata/model"
 )
 
 var RPC = struct {
-	ArithService struct{ Sum, Positive, DoSomething, Multiply, Divide, Pow, Pi, SumArray string }
+	ArithService struct{ Sum, Positive, DoSomething, DoSomethingWithPoint, Multiply, Divide, Pow, Pi, SumArray string }
 	PhoneBook    struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }
 }{
-	ArithService: struct{ Sum, Positive, DoSomething, Multiply, Divide, Pow, Pi, SumArray string }{
-		Sum:         "sum",
-		Positive:    "positive",
-		DoSomething: "dosomething",
-		Multiply:    "multiply",
-		Divide:      "divide",
-		Pow:         "pow",
-		Pi:          "pi",
-		SumArray:    "sumarray",
+	ArithService: struct{ Sum, Positive, DoSomething, DoSomethingWithPoint, Multiply, Divide, Pow, Pi, SumArray string }{
+		Sum:                  "sum",
+		Positive:             "positive",
+		DoSomething:          "dosomething",
+		DoSomethingWithPoint: "dosomethingwithpoint",
+		Multiply:             "multiply",
+		Divide:               "divide",
+		Pow:                  "pow",
+		Pi:                   "pi",
+		SumArray:             "sumarray",
 	},
 	PhoneBook: struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }{
 		Get:            "get",
@@ -41,75 +44,165 @@ func (ArithService) SMD() smd.ServiceInfo {
 			"Sum": {
 				Description: `Sum sums two digits and returns error with error code as result and IP from context.`,
 				Parameters: []smd.JSONSchema{
-					{Name: "a", Optional: false, Description: ``, Type: smd.Integer},
-					{Name: "b", Optional: false, Description: ``, Type: smd.Integer},
+					{
+						Name:        "a",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Integer,
+					},
+					{
+						Name:        "b",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Integer,
+					},
 				},
 				Returns: smd.JSONSchema{
-					Type:     smd.Boolean,
-					Optional: false,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Boolean,
 				},
 			},
 			"Positive": {
 				Description: ``,
 				Parameters:  []smd.JSONSchema{},
 				Returns: smd.JSONSchema{
-					Type:     smd.Boolean,
-					Optional: false,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Boolean,
 				},
 			},
 			"DoSomething": {
 				Description: ``,
 				Parameters:  []smd.JSONSchema{},
 			},
+			"DoSomethingWithPoint": {
+				Description: ``,
+				Parameters: []smd.JSONSchema{
+					{
+						Name:        "p",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Object,
+						Properties: map[string]smd.Property{
+							"X": {
+								Description: `coordinate`,
+								Type:        smd.Integer,
+							},
+							"Y": {
+								Description: `coordinate`,
+								Type:        smd.Integer,
+							},
+						},
+					},
+				},
+			},
 			"Multiply": {
 				Description: `Multiply multiples two digits and returns result.`,
 				Parameters: []smd.JSONSchema{
-					{Name: "a", Optional: false, Description: ``, Type: smd.Integer},
-					{Name: "b", Optional: false, Description: ``, Type: smd.Integer},
+					{
+						Name:        "a",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Integer,
+					},
+					{
+						Name:        "b",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Integer,
+					},
 				},
 				Returns: smd.JSONSchema{
-					Type:     smd.Integer,
-					Optional: false,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Integer,
 				},
 			},
 			"Divide": {
 				Description: `Divide divides two numbers.`,
 				Parameters: []smd.JSONSchema{
-					{Name: "a", Optional: false, Description: ``, Type: smd.Integer},
-					{Name: "b", Optional: false, Description: ``, Type: smd.Integer},
+					{
+						Name:        "a",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Integer,
+					},
+					{
+						Name:        "b",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Integer,
+					},
 				},
 				Returns: smd.JSONSchema{
-					Type:     smd.Object,
-					Optional: true,
+					Description: ``,
+					Optional:    true,
+					Type:        smd.Object,
+					Properties: map[string]smd.Property{
+						"Quo": {
+							Description: `Quo docs`,
+							Type:        smd.Integer,
+						},
+						"rem": {
+							Description: `Rem docs`,
+							Type:        smd.Integer,
+						},
+					},
+				},
+				Errors: map[int]string{
+					401:    "we do not serve 1",
+					-32603: "divide by zero",
 				},
 			},
 			"Pow": {
 				Description: `Pow returns x**y, the base-x exponential of y. If Exp is not set then default value is 2.`,
 				Parameters: []smd.JSONSchema{
-					{Name: "base", Optional: false, Description: ``, Type: smd.Float},
-					{Name: "exp", Optional: true, Description: ``, Type: smd.Float},
+					{
+						Name:        "base",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Float,
+					},
+					{
+						Name:        "exp",
+						Optional:    true,
+						Description: ``,
+						Type:        smd.Float,
+					},
 				},
 				Returns: smd.JSONSchema{
-					Type:     smd.Float,
-					Optional: false,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Float,
 				},
 			},
 			"Pi": {
 				Description: `PI returns math.Pi.`,
 				Parameters:  []smd.JSONSchema{},
 				Returns: smd.JSONSchema{
-					Type:     smd.Float,
-					Optional: false,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Float,
 				},
 			},
 			"SumArray": {
 				Description: `SumArray returns sum all items from array`,
 				Parameters: []smd.JSONSchema{
-					{Name: "array", Optional: true, Description: ``, Type: smd.Array},
+					{
+						Name:        "array",
+						Optional:    true,
+						Description: ``,
+						Type:        smd.Array,
+						Items: map[string]string{
+							"type": smd.Float,
+						},
+					},
 				},
 				Returns: smd.JSONSchema{
-					Type:     smd.Float,
-					Optional: false,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Float,
 				},
 			},
 		},
@@ -147,6 +240,25 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 	case RPC.ArithService.DoSomething:
 		s.DoSomething()
+
+	case RPC.ArithService.DoSomethingWithPoint:
+		var args = struct {
+			P model.Point `json:"p"`
+		}{}
+
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"p"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		s.DoSomethingWithPoint(args.P)
 
 	case RPC.ArithService.Multiply:
 		var args = struct {
@@ -256,65 +368,356 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 			"Get": {
 				Description: `Get returns all people from DB.`,
 				Parameters: []smd.JSONSchema{
-					{Name: "search", Optional: false, Description: ``, Type: smd.Object},
-					{Name: "page", Optional: true, Description: ``, Type: smd.Integer},
-					{Name: "count", Optional: true, Description: ``, Type: smd.Integer},
+					{
+						Name:        "search",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Object,
+						Properties: map[string]smd.Property{
+							"ByName": {
+								Description: `ByName is filter for searching person by first name or last name.`,
+								Type:        smd.String,
+							},
+							"ByType": {
+								Description: ``,
+								Type:        smd.String,
+							},
+							"ByPhone": {
+								Description: ``,
+								Type:        smd.String,
+							},
+							"ByAddress": {
+								Description: ``,
+								Ref:         "#/definitions/Address",
+								Type:        smd.Object,
+							},
+						},
+						Definitions: map[string]smd.Definition{
+							"Address": {
+								Properties: map[string]smd.Property{
+									"Street": {
+										Description: ``,
+										Type:        smd.String,
+									},
+									"City": {
+										Description: ``,
+										Type:        smd.String,
+									},
+								},
+							},
+						},
+					},
+					{
+						Name:        "page",
+						Optional:    true,
+						Description: ``,
+						Type:        smd.Integer,
+					},
+					{
+						Name:        "count",
+						Optional:    true,
+						Description: ``,
+						Type:        smd.Integer,
+					},
 				},
 				Returns: smd.JSONSchema{
-					Type:     smd.Array,
-					Optional: false,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Array,
+					Items: map[string]string{
+						"$ref": "#/definitions/Person",
+					},
+					Definitions: map[string]smd.Definition{
+						"Address": {
+							Properties: map[string]smd.Property{
+								"Street": {
+									Description: ``,
+									Type:        smd.String,
+								},
+								"City": {
+									Description: ``,
+									Type:        smd.String,
+								},
+							},
+						},
+					},
 				},
 			},
 			"ValidateSearch": {
 				Description: `ValidateSearch returns given search as result.`,
 				Parameters: []smd.JSONSchema{
-					{Name: "search", Optional: true, Description: ``, Type: smd.Object},
+					{
+						Name:        "search",
+						Optional:    true,
+						Description: ``,
+						Type:        smd.Object,
+						Properties: map[string]smd.Property{
+							"ByName": {
+								Description: `ByName is filter for searching person by first name or last name.`,
+								Type:        smd.String,
+							},
+							"ByType": {
+								Description: ``,
+								Type:        smd.String,
+							},
+							"ByPhone": {
+								Description: ``,
+								Type:        smd.String,
+							},
+							"ByAddress": {
+								Description: ``,
+								Ref:         "#/definitions/Address",
+								Type:        smd.Object,
+							},
+						},
+						Definitions: map[string]smd.Definition{
+							"Address": {
+								Properties: map[string]smd.Property{
+									"Street": {
+										Description: ``,
+										Type:        smd.String,
+									},
+									"City": {
+										Description: ``,
+										Type:        smd.String,
+									},
+								},
+							},
+						},
+					},
 				},
 				Returns: smd.JSONSchema{
-					Type:     smd.Object,
-					Optional: true,
+					Description: ``,
+					Optional:    true,
+					Type:        smd.Object,
+					Properties: map[string]smd.Property{
+						"ByName": {
+							Description: `ByName is filter for searching person by first name or last name.`,
+							Type:        smd.String,
+						},
+						"ByType": {
+							Description: ``,
+							Type:        smd.String,
+						},
+						"ByPhone": {
+							Description: ``,
+							Type:        smd.String,
+						},
+						"ByAddress": {
+							Description: ``,
+							Ref:         "#/definitions/Address",
+							Type:        smd.Object,
+						},
+					},
+					Definitions: map[string]smd.Definition{
+						"Address": {
+							Properties: map[string]smd.Property{
+								"Street": {
+									Description: ``,
+									Type:        smd.String,
+								},
+								"City": {
+									Description: ``,
+									Type:        smd.String,
+								},
+							},
+						},
+					},
 				},
 			},
 			"ById": {
 				Description: `ById returns Person from DB.`,
 				Parameters: []smd.JSONSchema{
-					{Name: "id", Optional: false, Description: ``, Type: smd.Integer},
+					{
+						Name:        "id",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Integer,
+					},
 				},
 				Returns: smd.JSONSchema{
-					Type:     smd.Object,
-					Optional: true,
+					Description: ``,
+					Optional:    true,
+					Type:        smd.Object,
+					Properties: map[string]smd.Property{
+						"ID": {
+							Description: `ID is Unique Identifier for person`,
+							Type:        smd.Integer,
+						},
+						"FirstName": {
+							Description: ``,
+							Type:        smd.String,
+						},
+						"LastName": {
+							Description: ``,
+							Type:        smd.String,
+						},
+						"Phone": {
+							Description: `Phone is main phone`,
+							Type:        smd.String,
+						},
+						"WorkPhone": {
+							Description: ``,
+							Type:        smd.String,
+						},
+						"Mobile": {
+							Description: ``,
+							Type:        smd.Array,
+							Items: map[string]string{
+								"type": smd.String,
+							},
+						},
+						"Deleted": {
+							Description: `Deleted is flag for`,
+							Type:        smd.Boolean,
+						},
+						"Addresses": {
+							Description: `Addresses Could be nil or len() == 0.`,
+							Type:        smd.Array,
+							Items: map[string]string{
+								"$ref": "#/definitions/Address",
+							},
+						},
+						"address": {
+							Description: ``,
+							Ref:         "#/definitions/Address",
+							Type:        smd.Object,
+						},
+					},
+					Definitions: map[string]smd.Definition{
+						"Address": {
+							Properties: map[string]smd.Property{
+								"Street": {
+									Description: ``,
+									Type:        smd.String,
+								},
+								"City": {
+									Description: ``,
+									Type:        smd.String,
+								},
+							},
+						},
+					},
+				},
+				Errors: map[int]string{
+					404: "person was not found",
 				},
 			},
 			"Delete": {
 				Description: `Delete marks person as deleted.`,
 				Parameters: []smd.JSONSchema{
-					{Name: "id", Optional: false, Description: ``, Type: smd.Integer},
+					{
+						Name:        "id",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Integer,
+					},
 				},
 				Returns: smd.JSONSchema{
-					Type:     smd.Boolean,
-					Optional: false,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Boolean,
 				},
 			},
 			"Remove": {
 				Description: `Removes deletes person from DB.`,
 				Parameters: []smd.JSONSchema{
-					{Name: "id", Optional: false, Description: ``, Type: smd.Integer},
+					{
+						Name:        "id",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Integer,
+					},
 				},
 				Returns: smd.JSONSchema{
-					Type:        smd.Boolean,
 					Description: `operation result`,
 					Optional:    false,
+					Type:        smd.Boolean,
 				},
 			},
 			"Save": {
 				Description: `Save saves person to DB.`,
 				Parameters: []smd.JSONSchema{
-					{Name: "p", Optional: false, Description: ``, Type: smd.Object},
-					{Name: "replace", Optional: true, Description: ``, Type: smd.Boolean},
+					{
+						Name:        "p",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Object,
+						Properties: map[string]smd.Property{
+							"ID": {
+								Description: `ID is Unique Identifier for person`,
+								Type:        smd.Integer,
+							},
+							"FirstName": {
+								Description: ``,
+								Type:        smd.String,
+							},
+							"LastName": {
+								Description: ``,
+								Type:        smd.String,
+							},
+							"Phone": {
+								Description: `Phone is main phone`,
+								Type:        smd.String,
+							},
+							"WorkPhone": {
+								Description: ``,
+								Type:        smd.String,
+							},
+							"Mobile": {
+								Description: ``,
+								Type:        smd.Array,
+								Items: map[string]string{
+									"type": smd.String,
+								},
+							},
+							"Deleted": {
+								Description: `Deleted is flag for`,
+								Type:        smd.Boolean,
+							},
+							"Addresses": {
+								Description: `Addresses Could be nil or len() == 0.`,
+								Type:        smd.Array,
+								Items: map[string]string{
+									"$ref": "#/definitions/Address",
+								},
+							},
+							"address": {
+								Description: ``,
+								Ref:         "#/definitions/Address",
+								Type:        smd.Object,
+							},
+						},
+						Definitions: map[string]smd.Definition{
+							"Address": {
+								Properties: map[string]smd.Property{
+									"Street": {
+										Description: ``,
+										Type:        smd.String,
+									},
+									"City": {
+										Description: ``,
+										Type:        smd.String,
+									},
+								},
+							},
+						},
+					},
+					{
+						Name:        "replace",
+						Optional:    true,
+						Description: ``,
+						Type:        smd.Boolean,
+					},
 				},
 				Returns: smd.JSONSchema{
-					Type:     smd.Integer,
-					Optional: false,
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Integer,
+				},
+				Errors: map[int]string{
+					400: "invalid request",
+					401: "use replace=true",
 				},
 			},
 		},
