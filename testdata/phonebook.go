@@ -90,8 +90,8 @@ type PhoneBook struct {
 } //zenrpc
 
 // Get returns all people from DB.
-//zenrpc:page:0 current page
-//zenrpc:count:50 page size
+//zenrpc:page=0 current page
+//zenrpc:count=50 page size
 func (pb PhoneBook) Get(search PersonSearch, page, count *int) (res []*Person) {
 	for _, p := range pb.DB {
 		res = append(res, p)
@@ -142,7 +142,7 @@ func (pb PhoneBook) Remove(id uint64) (success bool, error error) {
 }
 
 // Save saves person to DB.
-//zenrpc:replace:false update person if exist
+//zenrpc:replace=false update person if exist
 //zenrpc:400 	invalid request
 //zenrpc:401 	use replace=true
 func (pb *PhoneBook) Save(p Person, replace *bool) (id uint64, err *zenrpc.Error) {

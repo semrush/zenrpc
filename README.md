@@ -104,7 +104,7 @@ func main() {
 All comments are optional.
 
     Method comments
-    //zenrpc:<method parameter>[:<default value>][whitespaces<description>]
+    //zenrpc:<method parameter>[=<default value>][whitespaces<description>]
     //zenrpc:<error code>[whitespaces<description>]
     //zenrpc:return[whitespaces<description>]
      

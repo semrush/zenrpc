@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -371,7 +370,7 @@ func (m *Method) parseArguments(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNam
 			for _, s := range serviceNames {
 				methods = append(methods, s+"."+m.Name)
 			}
-			return errors.New(fmt.Sprintf("Can't parse type of argument %s in %s", strings.Join(fields, ", "), strings.Join(methods, ", ")))
+			return fmt.Errorf("Can't parse type of argument %s in %s", strings.Join(fields, ", "), strings.Join(methods, ", "))
 		}
 
 		if typeName == contextTypeName {
@@ -430,13 +429,13 @@ func (m *Method) parseReturns(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNames
 	hasError := false
 	for _, field := range fdecl.Type.Results.List {
 		if len(field.Names) > 1 {
-			return errors.New(fmt.Sprintf("%s contain more than one return arguments with same type", methods()))
+			return fmt.Errorf("%s contain more than one return arguments with same type", methods())
 		}
 
 		// parse type
 		typeName := parseType(field.Type)
 		if typeName == "" {
-			return errors.New(fmt.Sprintf("Can't parse type of return value in %s on position %d", methods(), len(m.Returns)+1))
+			return fmt.Errorf("Can't parse type of return value in %s on position %d", methods(), len(m.Returns)+1)
 		}
 
 		var fieldName string
@@ -452,14 +451,14 @@ func (m *Method) parseReturns(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNames
 
 		if typeName == "error" || typeName == errorTypeName || typeName == "*"+errorTypeName {
 			if hasError {
-				return errors.New(fmt.Sprintf("%s contain more than one error return arguments", methods()))
+				return fmt.Errorf("%s contain more than one error return arguments", methods())
 			}
 			hasError = true
 			continue
 		}
 
 		if m.SMDReturn != nil {
-			return errors.New(fmt.Sprintf("%s contain more than one valuable return argument", methods()))
+			return fmt.Errorf("%s contain more than one valuable return argument", methods())
 		}
 
 		hasStar := hasStar(typeName) // check for pointer
@@ -510,9 +509,9 @@ func (m *Method) parseComments(doc *ast.CommentGroup, pi *PackageInfo) {
 		}
 
 		// parse arguments
-		if args := strings.Split(couple[0], ":"); len(args) == 2 {
+		if args := strings.Split(couple[0], "="); len(args) == 2 {
 			// default value
-			// example: "//zenrpc:exp:2 	exponent could be empty"
+			// example: "//zenrpc:exp=2 	exponent could be empty"
 			name := args[0]
 			value := args[1]
 

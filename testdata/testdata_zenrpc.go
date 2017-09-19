@@ -318,7 +318,7 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 			}
 		}
 
-		//zenrpc:exp:2 	exponent could be empty
+		//zenrpc:exp=2 	exponent could be empty
 		if args.Exp == nil {
 			var v float64 = 2
 			args.Exp = &v
@@ -346,7 +346,7 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 			}
 		}
 
-		//zenrpc:array:[]float64{1,2,4}
+		//zenrpc:array=[]float64{1,2,4}
 		if args.Array == nil {
 			var v []float64 = []float64{1, 2, 4}
 			args.Array = &v
@@ -749,13 +749,13 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 			}
 		}
 
-		//zenrpc:count:50 page size
+		//zenrpc:count=50 page size
 		if args.Count == nil {
 			var v int = 50
 			args.Count = &v
 		}
 
-		//zenrpc:page:0 current page
+		//zenrpc:page=0 current page
 		if args.Page == nil {
 			var v int = 0
 			args.Page = &v
@@ -857,7 +857,7 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 			}
 		}
 
-		//zenrpc:replace:false update person if exist
+		//zenrpc:replace=false update person if exist
 		if args.Replace == nil {
 			var v bool = false
 			args.Replace = &v

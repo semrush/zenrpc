@@ -63,7 +63,7 @@ func (as *ArithService) Divide(a, b int) (quo *Quotient, err error) {
 }
 
 // Pow returns x**y, the base-x exponential of y. If Exp is not set then default value is 2.
-//zenrpc:exp:2 	exponent could be empty
+//zenrpc:exp=2 	exponent could be empty
 func (as *ArithService) Pow(base float64, exp *float64) float64 {
 	return math.Pow(base, *exp)
 }
@@ -74,7 +74,7 @@ func (ArithService) Pi() float64 {
 }
 
 // SumArray returns sum all items from array
-//zenrpc:array:[]float64{1,2,4}
+//zenrpc:array=[]float64{1,2,4}
 func (as *ArithService) SumArray(array *[]float64) float64 {
 	var sum float64
 
