@@ -13,6 +13,40 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+func TestServer_ServeHTTPWithHeaders(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(rpc.ServeHTTP))
+	defer ts.Close()
+
+	var tc = []struct {
+		h string
+		s int
+	}{
+		{
+			h: "application/json",
+			s: 200,
+		},
+		{
+			h: "application/json; charset=utf-8",
+			s: 200,
+		},
+		{
+			h: "application/text; charset=utf-8",
+			s: 415,
+		},
+	}
+
+	for _, c := range tc {
+		res, err := http.Post(ts.URL, c.h, bytes.NewBufferString(`{"jsonrpc": "2.0", "method": "arith.pi", "id": 2 }`))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if res.StatusCode != c.s {
+			t.Errorf("Input: %s\n got %d expected %d", c.h, res.StatusCode, c.s)
+		}
+	}
+}
+
 func TestServer_ServeHTTP(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(rpc.ServeHTTP))
 	defer ts.Close()
