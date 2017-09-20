@@ -110,6 +110,13 @@ func (s *Server) Register(namespace string, service Invoker) {
 	s.services[namespace] = service
 }
 
+// RegisterAll registers all services listed in map.
+func (s *Server) RegisterAll(services map[string]Invoker) {
+	for ns, srv := range services {
+		s.Register(ns, srv)
+	}
+}
+
 // SetLogger sets logger for debug
 func (s *Server) SetLogger(printer Printer) {
 	s.logger = printer
