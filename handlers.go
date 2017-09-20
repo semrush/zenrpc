@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -25,7 +26,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// check for content-type and POST method.
 	if !s.options.DisableTransportChecks {
-		if r.Header.Get("Content-Type") != contentTypeJSON {
+		if !strings.HasPrefix(r.Header.Get("Content-Type"), contentTypeJSON) {
 			w.WriteHeader(http.StatusUnsupportedMediaType)
 			return
 		} else if r.Method == http.MethodGet {
