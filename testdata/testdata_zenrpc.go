@@ -167,7 +167,7 @@ func (ArithService) SMD() smd.ServiceInfo {
 					{
 						Name:        "exp",
 						Optional:    true,
-						Description: ``,
+						Description: `exponent could be empty`,
 						Type:        smd.Float,
 					},
 				},
@@ -410,13 +410,13 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					{
 						Name:        "page",
 						Optional:    true,
-						Description: ``,
+						Description: `current page`,
 						Type:        smd.Integer,
 					},
 					{
 						Name:        "count",
 						Optional:    true,
-						Description: ``,
+						Description: `page size`,
 						Type:        smd.Integer,
 					},
 				},
@@ -706,7 +706,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					{
 						Name:        "replace",
 						Optional:    true,
-						Description: ``,
+						Description: `update person if exist`,
 						Type:        smd.Boolean,
 					},
 				},

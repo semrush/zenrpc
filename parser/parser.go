@@ -515,7 +515,7 @@ func (m *Method) parseComments(doc *ast.CommentGroup, pi *PackageInfo) {
 			name := args[0]
 			value := args[1]
 
-			for _, a := range m.Args {
+			for i, a := range m.Args {
 				if a.Name == name {
 					m.DefaultValues[name] = DefaultValue{
 						Name:        name,
@@ -526,7 +526,7 @@ func (m *Method) parseComments(doc *ast.CommentGroup, pi *PackageInfo) {
 					}
 
 					if len(couple) == 2 {
-						a.Description = strings.TrimSpace(couple[1])
+						m.Args[i].Description = strings.TrimSpace(couple[1])
 					}
 
 					break
