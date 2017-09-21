@@ -15,6 +15,7 @@ import (
 var RPC = struct {
 	ArithService struct{ Sum, Positive, DoSomething, DoSomethingWithPoint, Multiply, Divide, Pow, Pi, SumArray string }
 	PhoneBook    struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }
+	PrintService struct{ PrintRequiredDefault, PrintOptionalWithDefault, PrintRequired, PrintOptional string }
 }{
 	ArithService: struct{ Sum, Positive, DoSomething, DoSomethingWithPoint, Multiply, Divide, Pow, Pi, SumArray string }{
 		Sum:                  "sum",
@@ -34,6 +35,12 @@ var RPC = struct {
 		Delete:         "delete",
 		Remove:         "remove",
 		Save:           "save",
+	},
+	PrintService: struct{ PrintRequiredDefault, PrintOptionalWithDefault, PrintRequired, PrintOptional string }{
+		PrintRequiredDefault:     "printrequireddefault",
+		PrintOptionalWithDefault: "printoptionalwithdefault",
+		PrintRequired:            "printrequired",
+		PrintOptional:            "printoptional",
 	},
 }
 
@@ -864,6 +871,179 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 		}
 
 		resp.Set(s.Save(args.P, args.Replace))
+
+	default:
+		resp = zenrpc.NewResponseError(nil, zenrpc.MethodNotFound, "", nil)
+	}
+
+	return resp
+}
+
+func (PrintService) SMD() smd.ServiceInfo {
+	return smd.ServiceInfo{
+		Description: ``,
+		Methods: map[string]smd.Service{
+			"PrintRequiredDefault": {
+				Description: ``,
+				Parameters: []smd.JSONSchema{
+					{
+						Name:        "s",
+						Optional:    true,
+						Description: ``,
+						Type:        smd.String,
+					},
+				},
+				Returns: smd.JSONSchema{
+					Description: ``,
+					Optional:    false,
+					Type:        smd.String,
+				},
+			},
+			"PrintOptionalWithDefault": {
+				Description: ``,
+				Parameters: []smd.JSONSchema{
+					{
+						Name:        "s",
+						Optional:    true,
+						Description: ``,
+						Type:        smd.String,
+					},
+				},
+				Returns: smd.JSONSchema{
+					Description: ``,
+					Optional:    false,
+					Type:        smd.String,
+				},
+			},
+			"PrintRequired": {
+				Description: ``,
+				Parameters: []smd.JSONSchema{
+					{
+						Name:        "s",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.String,
+					},
+				},
+				Returns: smd.JSONSchema{
+					Description: ``,
+					Optional:    false,
+					Type:        smd.String,
+				},
+			},
+			"PrintOptional": {
+				Description: ``,
+				Parameters: []smd.JSONSchema{
+					{
+						Name:        "s",
+						Optional:    true,
+						Description: ``,
+						Type:        smd.String,
+					},
+				},
+				Returns: smd.JSONSchema{
+					Description: ``,
+					Optional:    false,
+					Type:        smd.String,
+				},
+			},
+		},
+	}
+}
+
+// Invoke is as generated code from zenrpc cmd
+func (s PrintService) Invoke(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
+	resp := zenrpc.Response{}
+	var err error
+
+	switch method {
+	case RPC.PrintService.PrintRequiredDefault:
+		var args = struct {
+			S *string `json:"s"`
+		}{}
+
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"s"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		//zenrpc:s="test"
+		if args.S == nil {
+			var v string = "test"
+			args.S = &v
+		}
+
+		resp.Set(s.PrintRequiredDefault(*args.S))
+
+	case RPC.PrintService.PrintOptionalWithDefault:
+		var args = struct {
+			S *string `json:"s"`
+		}{}
+
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"s"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		//zenrpc:s="test"
+		if args.S == nil {
+			var v string = "test"
+			args.S = &v
+		}
+
+		resp.Set(s.PrintOptionalWithDefault(args.S))
+
+	case RPC.PrintService.PrintRequired:
+		var args = struct {
+			S string `json:"s"`
+		}{}
+
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"s"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		resp.Set(s.PrintRequired(args.S))
+
+	case RPC.PrintService.PrintOptional:
+		var args = struct {
+			S *string `json:"s"`
+		}{}
+
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"s"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		resp.Set(s.PrintOptional(args.S))
 
 	default:
 		resp = zenrpc.NewResponseError(nil, zenrpc.MethodNotFound, "", nil)

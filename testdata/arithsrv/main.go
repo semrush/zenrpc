@@ -24,6 +24,7 @@ func main() {
 	})
 	rpc.Register(phonebook, testdata.PhoneBook{DB: testdata.People})
 	rpc.Register("arith", testdata.ArithService{})
+	rpc.Register("printer", testdata.PrintService{})
 	rpc.Register("", testdata.ArithService{}) // public
 
 	rpc.Use(zenrpc.Logger(log.New(os.Stderr, "", log.LstdFlags)))
