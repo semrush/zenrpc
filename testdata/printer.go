@@ -22,7 +22,7 @@ func (PrintService) PrintRequired(s string) string {
 func (PrintService) PrintOptional(s *string) string {
 	if s == nil {
 		return "string is empty"
-	} 
-	
-	return *s	
+	}
+
+	return *s
 }

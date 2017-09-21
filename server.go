@@ -223,8 +223,8 @@ func (s Server) processRequest(ctx context.Context, req Request) Response {
 
 	// set middleware to func
 	f := InvokeFunc(s.services[namespace].Invoke)
-	for _, m := range s.middleware {
-		f = m(f)
+	for i := len(s.middleware)-1; i >= 0; i-- {
+		f = s.middleware[i](f)
 	}
 
 	// invoke func with middleware
