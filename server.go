@@ -107,7 +107,7 @@ func (s *Server) Use(m ...MiddlewareFunc) {
 
 // Register registers new service for given namespace. For public namespace use empty string.
 func (s *Server) Register(namespace string, service Invoker) {
-	s.services[namespace] = service
+	s.services[strings.ToLower(namespace)] = service
 }
 
 // RegisterAll registers all services listed in map.
