@@ -33,6 +33,9 @@ type PackageInfo struct {
 	Scopes  map[string][]*ast.Scope // key - import name, value - array of scopes from each package file
 	Structs map[string]*Struct
 	Imports []*ast.ImportSpec
+
+	StructsNamespacesFromArgs map[string]struct{} // set of structs names from arguments for printing imports
+	ImportsForGeneration      []*ast.ImportSpec
 }
 
 type Service struct {
@@ -118,6 +121,9 @@ func NewPackageInfo() *PackageInfo {
 		Scopes:  make(map[string][]*ast.Scope),
 		Structs: make(map[string]*Struct),
 		Imports: []*ast.ImportSpec{},
+
+		StructsNamespacesFromArgs: make(map[string]struct{}),
+		ImportsForGeneration:      []*ast.ImportSpec{},
 	}
 }
 
@@ -150,6 +156,7 @@ func (pi *PackageInfo) ParseFiles(filename string) (string, error) {
 
 	// collect scopes from imported packages
 	pi.Imports = uniqueImports(pi.Imports)
+	pi.ImportsForGeneration = filterImports(pi.Imports, pi.StructsNamespacesFromArgs)
 	pi.Imports = filterImports(pi.Imports, uniqueStructsNamespaces(pi.Structs))
 	if err := pi.parseImports(pi.Imports, dir); err != nil {
 		return dir, err
@@ -386,6 +393,13 @@ func (m *Method) parseArguments(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNam
 		var ref string
 		if s != nil {
 			ref = s.Name
+
+			// collect namespaces (imports)
+			if s.Namespace != "" {
+				if _, ok := pi.StructsNamespacesFromArgs[s.Namespace]; !ok {
+					pi.StructsNamespacesFromArgs[s.Namespace] = struct{}{}
+				}
+			}
 
 			if currentS, ok := pi.Structs[s.Name]; !ok || (currentS.StructType == nil && s.StructType != nil) {
 				pi.Structs[s.Name] = s
