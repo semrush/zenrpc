@@ -512,9 +512,9 @@ func (m *Method) parseComments(doc *ast.CommentGroup, pi *PackageInfo) {
 		if args := strings.Split(couple[0], "="); len(args) == 2 {
 			// default value
 			// example: "//zenrpc:exp=2 	exponent could be empty"
+
 			name := args[0]
 			value := args[1]
-
 			for i, a := range m.Args {
 				if a.Name == name {
 					m.DefaultValues[name] = DefaultValue{
@@ -526,7 +526,7 @@ func (m *Method) parseComments(doc *ast.CommentGroup, pi *PackageInfo) {
 					}
 
 					if len(couple) == 2 {
-						m.Args[i].Description = strings.TrimSpace(couple[1])
+						m.Args[i].Description = couple[1]
 					}
 
 					break
@@ -535,11 +535,23 @@ func (m *Method) parseComments(doc *ast.CommentGroup, pi *PackageInfo) {
 		} else if couple[0] == "return" {
 			// description for return
 			// example: "//zenrpc:return operation result"
-			m.SMDReturn.Description = strings.TrimSpace(couple[1])
-		} else if i, err := strconv.Atoi(couple[0]); err == nil && len(couple) == 2 {
+
+			m.SMDReturn.Description = couple[1]
+		} else if i, err := strconv.Atoi(couple[0]); err == nil {
 			// error code
 			// example: "//zenrpc:-32603		divide by zero"
-			m.Errors = append(m.Errors, SMDError{i, strings.TrimSpace(couple[1])})
+
+			m.Errors = append(m.Errors, SMDError{i, couple[1]})
+		} else {
+			// description for argument without default value
+			// example: "//zenrpc:id person id"
+
+			for i, a := range m.Args {
+				if a.Name == couple[0] {
+					m.Args[i].Description = couple[1]
+					break
+				}
+			}
 		}
 	}
 }

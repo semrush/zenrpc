@@ -125,13 +125,13 @@ func (ArithService) SMD() smd.ServiceInfo {
 					{
 						Name:        "a",
 						Optional:    false,
-						Description: ``,
+						Description: `the a`,
 						Type:        smd.Integer,
 					},
 					{
 						Name:        "b",
 						Optional:    false,
-						Description: ``,
+						Description: `the b`,
 						Type:        smd.Integer,
 					},
 				},
@@ -449,7 +449,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					{
 						Name:        "search",
 						Optional:    true,
-						Description: ``,
+						Description: `search object`,
 						Type:        smd.Object,
 						Properties: map[string]smd.Property{
 							"ByName": {
@@ -531,7 +531,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					{
 						Name:        "id",
 						Optional:    false,
-						Description: ``,
+						Description: `person id`,
 						Type:        smd.Integer,
 					},
 				},
@@ -609,7 +609,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					{
 						Name:        "id",
 						Optional:    false,
-						Description: ``,
+						Description: `person id`,
 						Type:        smd.Integer,
 					},
 				},
@@ -625,7 +625,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					{
 						Name:        "id",
 						Optional:    false,
-						Description: ``,
+						Description: `person id`,
 						Type:        smd.Integer,
 					},
 				},
