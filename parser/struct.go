@@ -151,16 +151,25 @@ func parseJsonTag(bl *ast.BasicLit) string {
 	return tag
 }
 
-func Definitions(smdType SMDType, structs map[string]*Struct) map[string]*Struct {
+func Definitions(smdType SMDType, structs map[string]*Struct) []*Struct {
 	if smdType.Ref == "" {
 		return nil
 	}
 
 	names := definitions(smdType, structs)
-	result := make(map[string]*Struct)
+	if smdType.Type == "Array" {
+		// add object to definitions if type array
+		names = append([]string{smdType.Ref}, names...)
+	}
+
+	result := []*Struct{}
+	unique := map[string]struct{}{} // structs in result must be unique
 	for _, name := range names {
 		if s, ok := structs[name]; ok {
-			result[name] = s
+			if _, ok := unique[name]; !ok {
+				result = append(result, s)
+				unique[name] = struct{}{}
+			}
 		}
 	}
 

@@ -39,11 +39,11 @@ var (
 {{define "definitions" -}}
 	{{if .}}
 	Definitions: map[string]smd.Definition{
-		{{- range $name, $struct := .}}
-			"{{ $name}}": {
+		{{- range .}}
+			"{{ .Name }}": {
 				{{ template "properties" .Properties}}
 			},
-		{{ end }}
+		{{- end }}
 	},
 	{{ end }}
 {{- end}}

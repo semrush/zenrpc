@@ -435,6 +435,53 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 						"$ref": "#/definitions/Person",
 					},
 					Definitions: map[string]smd.Definition{
+						"Person": {
+							Properties: map[string]smd.Property{
+								"ID": {
+									Description: `ID is Unique Identifier for person`,
+									Type:        smd.Integer,
+								},
+								"FirstName": {
+									Description: ``,
+									Type:        smd.String,
+								},
+								"LastName": {
+									Description: ``,
+									Type:        smd.String,
+								},
+								"Phone": {
+									Description: `Phone is main phone`,
+									Type:        smd.String,
+								},
+								"WorkPhone": {
+									Description: ``,
+									Type:        smd.String,
+								},
+								"Mobile": {
+									Description: ``,
+									Type:        smd.Array,
+									Items: map[string]string{
+										"type": smd.String,
+									},
+								},
+								"Deleted": {
+									Description: `Deleted is flag for`,
+									Type:        smd.Boolean,
+								},
+								"Addresses": {
+									Description: `Addresses Could be nil or len() == 0.`,
+									Type:        smd.Array,
+									Items: map[string]string{
+										"$ref": "#/definitions/Address",
+									},
+								},
+								"address": {
+									Description: ``,
+									Ref:         "#/definitions/Address",
+									Type:        smd.Object,
+								},
+							},
+						},
 						"Address": {
 							Properties: map[string]smd.Property{
 								"Street": {
