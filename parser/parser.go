@@ -68,13 +68,14 @@ type DefaultValue struct {
 }
 
 type Arg struct {
-	Name        string
-	Type        string
-	CapitalName string
-	JsonName    string
-	HasStar     bool
-	Description string // from magic comment
-	SMDType     SMDType
+	Name            string
+	Type            string
+	CapitalName     string
+	JsonName        string
+	HasStar         bool
+	HasDefaultValue bool
+	Description     string // from magic comment
+	SMDType         SMDType
 }
 
 type Return struct {
@@ -534,11 +535,12 @@ func (m *Method) parseComments(doc *ast.CommentGroup, pi *PackageInfo) {
 					m.DefaultValues[name] = DefaultValue{
 						Name:        name,
 						CapitalName: a.CapitalName,
-						Type:        a.Type[1:], // remove star
+						Type:        strings.TrimPrefix(a.Type, "*"), // remove star
 						Comment:     comment.Text,
 						Value:       value,
 					}
 
+					m.Args[i].HasDefaultValue = true
 					if len(couple) == 2 {
 						m.Args[i].Description = couple[1]
 					}

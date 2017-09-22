@@ -92,7 +92,7 @@ var RPC = struct {
 						{{- range .Args }}
 							{
 								Name: "{{.Name}}",
-								Optional: {{.HasStar}},
+								Optional: {{or .HasStar .HasDefaultValue}},
 								Description: ` + "`{{.Description}}`" + `,
 								{{template "smdType" .SMDType}}
 								{{- if and (eq .SMDType.Type "Object") (ne .SMDType.Ref "")}}
@@ -136,7 +136,7 @@ var RPC = struct {
 			case RPC.{{$s.Name}}.{{.Name}}: {{ if .Args }}
 					var args = struct {
 						{{ range .Args }}
-							{{.CapitalName}} {{.Type}} ` + "`json:\"{{.JsonName}}\"`" + ` 
+							{{.CapitalName}} {{if and (not .HasStar) .HasDefaultValue}}*{{end}}{{.Type}} ` + "`json:\"{{.JsonName}}\"`" + `
 						{{- end }}
 					}{}
 
@@ -163,9 +163,9 @@ var RPC = struct {
 					{{ end }}
 
 				{{ end }} {{if .Returns}}
-					resp.Set(s.{{.Name}}({{if .HasContext}}ctx, {{end}} {{ range .Args }}args.{{.CapitalName}}, {{ end }}))
+					resp.Set(s.{{.Name}}({{if .HasContext}}ctx, {{end}} {{ range .Args }}{{if and (not .HasStar) .HasDefaultValue}}*{{end}}args.{{.CapitalName}}, {{ end }}))
 				{{else}}
-					s.{{.Name}}({{if .HasContext}}ctx, {{end}} {{ range .Args }}args.{{.CapitalName}}, {{ end }})
+					s.{{.Name}}({{if .HasContext}}ctx, {{end}} {{ range .Args }}{{if and (not .HasStar) .HasDefaultValue}}*{{end}}args.{{.CapitalName}}, {{ end }})
 				{{end}}
 		{{- end }}
 		default:
