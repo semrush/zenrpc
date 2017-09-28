@@ -115,6 +115,10 @@ func (s *Struct) parse(pi *PackageInfo) error {
 
 		// parse names
 		for i, name := range field.Names {
+			if !ast.IsExported(name.Name) {
+				continue
+			}
+
 			p := Property{
 				Name:        name.Name,
 				Description: description,
