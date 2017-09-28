@@ -129,7 +129,7 @@ var RPC = struct {
 	// Invoke is as generated code from zenrpc cmd
 	func (s {{.Name}}) Invoke(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
 		resp := zenrpc.Response{}
-		var err error
+		{{ if .HasErrorVariable }}var err error{{ end }}
 
 		switch method { 
 		{{- range .Methods }}

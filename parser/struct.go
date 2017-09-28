@@ -155,6 +155,7 @@ func parseJsonTag(bl *ast.BasicLit) string {
 	return tag
 }
 
+// Definitions returns list of structs used inside smdType
 func Definitions(smdType SMDType, structs map[string]*Struct) []*Struct {
 	if smdType.Ref == "" {
 		return nil
@@ -180,6 +181,7 @@ func Definitions(smdType SMDType, structs map[string]*Struct) []*Struct {
 	return result
 }
 
+// definitions returns list of struct names used inside smdType
 func definitions(smdType SMDType, structs map[string]*Struct) []string {
 	result := []string{}
 	if s, ok := structs[smdType.Ref]; ok {

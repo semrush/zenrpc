@@ -104,6 +104,7 @@ type Property struct {
 	SMDType     SMDType
 }
 
+// SMDType is a type representation for SMD generation
 type SMDType struct {
 	Type      string
 	ItemsType string // for array
@@ -321,6 +322,16 @@ func (pi PackageInfo) String() string {
 	}
 
 	return result
+}
+
+// HasErrorVariable define adding err variable to generated Invoke function
+func (s Service) HasErrorVariable() bool {
+	for _, m := range s.Methods {
+		if len(m.Args) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // linkWithServices add method for services
