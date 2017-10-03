@@ -13,7 +13,7 @@ var (
 	Type: smd.{{.Type}},
 	{{- if eq .Type "Array" }}
 		Items: map[string]string{
-			{{- if eq .ItemsType "Object" }}
+			{{- if and (eq .ItemsType "Object") .Ref }}
 			"$ref": "#/definitions/{{.Ref}}",
 			{{else}}
 			"type": smd.{{.ItemsType}},
@@ -27,7 +27,7 @@ var (
 	{{range $i, $e := . -}}
 		"{{.Name}}": {
 			Description: ` + "`{{.Description}}`" + `,
-			{{- if eq .SMDType.Type "Object" }}
+			{{- if and (eq .SMDType.Type "Object") .SMDType.Ref }}
 				Ref: "#/definitions/{{.SMDType.Ref}}",
 			{{- end}}			
 			{{template "smdType" .SMDType}}
