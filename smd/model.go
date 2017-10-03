@@ -83,6 +83,7 @@ type Property struct {
 }
 
 type Definition struct {
+	Type       string              `json:"type,omitempty"`
 	Properties map[string]Property `json:"properties,omitempty"`
 }
 

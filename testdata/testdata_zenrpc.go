@@ -401,6 +401,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 						},
 						Definitions: map[string]smd.Definition{
 							"Address": {
+								Type: "object",
 								Properties: map[string]smd.Property{
 									"Street": {
 										Description: ``,
@@ -436,6 +437,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					},
 					Definitions: map[string]smd.Definition{
 						"Person": {
+							Type: "object",
 							Properties: map[string]smd.Property{
 								"ID": {
 									Description: `ID is Unique Identifier for person`,
@@ -483,6 +485,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 							},
 						},
 						"Address": {
+							Type: "object",
 							Properties: map[string]smd.Property{
 								"Street": {
 									Description: ``,
@@ -526,6 +529,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 						},
 						Definitions: map[string]smd.Definition{
 							"Address": {
+								Type: "object",
 								Properties: map[string]smd.Property{
 									"Street": {
 										Description: ``,
@@ -565,6 +569,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					},
 					Definitions: map[string]smd.Definition{
 						"Address": {
+							Type: "object",
 							Properties: map[string]smd.Property{
 								"Street": {
 									Description: ``,
@@ -640,6 +645,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					},
 					Definitions: map[string]smd.Definition{
 						"Address": {
+							Type: "object",
 							Properties: map[string]smd.Property{
 								"Street": {
 									Description: ``,
@@ -744,6 +750,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 						},
 						Definitions: map[string]smd.Definition{
 							"Address": {
+								Type: "object",
 								Properties: map[string]smd.Property{
 									"Street": {
 										Description: ``,

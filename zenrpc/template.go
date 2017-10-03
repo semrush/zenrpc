@@ -41,6 +41,7 @@ var (
 	Definitions: map[string]smd.Definition{
 		{{- range .}}
 			"{{ .Name }}": {
+				Type: "object",
 				{{ template "properties" .Properties}}
 			},
 		{{- end }}
