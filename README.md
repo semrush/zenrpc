@@ -138,7 +138,7 @@ func main() {
 	rpc.Register("", testdata.ArithService{}) // public
 	rpc.Use(zenrpc.Logger(log.New(os.Stderr, "", log.LstdFlags)))
 
-	http.Handle("/", rpc)
+	http.Handle("/rpc", rpc)
 
 	log.Printf("starting arithsrv on %s", *addr)
 	log.Fatal(http.ListenAndServe(*addr, nil))
