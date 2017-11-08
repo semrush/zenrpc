@@ -133,7 +133,7 @@ func main() {
 	addr := flag.String("addr", "localhost:9999", "listen address")
 	flag.Parse()
 
-	rpc := zenrpc.NewServer(zenrpc.Options{ExposeSMD: true})
+	rpc := zenrpc.NewServer(zenrpc.Options{ExposeSMD: true, TargetURL: "rpc"})
 	rpc.Register("arith", testdata.ArithService{})
 	rpc.Register("", testdata.ArithService{}) // public
 	rpc.Use(zenrpc.Logger(log.New(os.Stderr, "", log.LstdFlags)))
