@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -130,7 +131,7 @@ func NewPackageInfo() *PackageInfo {
 }
 
 // ParseFiles parse all files associated with package from original file
-func (pi *PackageInfo) ParseFiles(filename string) (string, error) {
+func (pi *PackageInfo) Parse(filename string) (string, error) {
 	dir, err := filepath.Abs(filepath.Dir(filename))
 	if err != nil {
 		return dir, err
@@ -141,19 +142,8 @@ func (pi *PackageInfo) ParseFiles(filename string) (string, error) {
 		return dir, err
 	}
 
-	for _, f := range files {
-		if f.IsDir() {
-			continue
-		}
-
-		if !strings.HasSuffix(f.Name(), goFileSuffix) ||
-			strings.HasSuffix(f.Name(), GenerateFileSuffix) || strings.HasSuffix(f.Name(), testFileSuffix) {
-			continue
-		}
-
-		if err := pi.parseFile(filepath.Join(dir, f.Name())); err != nil {
-			return dir, err
-		}
+	if err := pi.parseFiles(files, dir); err != nil {
+		return dir, err
 	}
 
 	// collect scopes from imported packages
@@ -169,32 +159,48 @@ func (pi *PackageInfo) ParseFiles(filename string) (string, error) {
 	return dir, nil
 }
 
-func (pi *PackageInfo) parseFile(filename string) error {
-	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
-	if err != nil {
-		return err
+func (pi *PackageInfo) parseFiles(files []os.FileInfo, dir string) error {
+	astFiles := []*ast.File{}
+	// first loop: parse files and structs
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+
+		if !strings.HasSuffix(f.Name(), goFileSuffix) ||
+			strings.HasSuffix(f.Name(), GenerateFileSuffix) || strings.HasSuffix(f.Name(), testFileSuffix) {
+			continue
+		}
+
+		astFile, err := parser.ParseFile(token.NewFileSet(), filepath.Join(dir, f.Name()), nil, parser.ParseComments)
+		if err != nil {
+			return err
+		}
+
+		// for debug
+		//ast.Print(fset, astFile)
+
+		if len(pi.PackageName) == 0 {
+			pi.PackageName = astFile.Name.Name
+		} else if pi.PackageName != astFile.Name.Name {
+			continue
+		}
+
+		// get structs for zenrpc
+		pi.parseServices(astFile)
+
+		pi.Scopes["."] = append(pi.Scopes["."], astFile.Scope) // collect current package scopes
+		pi.Imports = append(pi.Imports, astFile.Imports...)    // collect imports
+
+		astFiles = append(astFiles, astFile)
 	}
 
-	// for debug
-	//ast.Print(fset, f)
-
-	if len(pi.PackageName) == 0 {
-		pi.PackageName = f.Name.Name
-	} else if pi.PackageName != f.Name.Name {
-		return nil
+	// second loop: parse methods
+	for _, f := range astFiles {
+		if err := pi.parseMethods(f); err != nil {
+			return err
+		}
 	}
-
-	// get structs for zenrpc
-	pi.parseServices(f)
-
-	// get funcs for structs
-	if err := pi.parseMethods(f); err != nil {
-		return err
-	}
-
-	pi.Scopes["."] = append(pi.Scopes["."], f.Scope) // collect current package scopes
-	pi.Imports = append(pi.Imports, f.Imports...)    // collect imports
 
 	return nil
 }

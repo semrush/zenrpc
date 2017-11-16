@@ -33,7 +33,7 @@ func main() {
 	fmt.Printf("Entrypoint: %s\n", filename)
 
 	pi := parser.NewPackageInfo()
-	dir, err := pi.ParseFiles(filename)
+	dir, err := pi.Parse(filename)
 	if err != nil {
 		printError(err)
 		os.Exit(1)
