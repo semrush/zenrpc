@@ -177,6 +177,8 @@ func (r *Response) Set(v interface{}, er ...error) {
 		if e, ok := err.(*Error); ok && e == nil {
 			err = nil
 		}
+	} else if e, ok := v.(*Error); ok && e != nil {
+		err = e
 	}
 
 	// set first error if occurred
