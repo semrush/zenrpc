@@ -13,16 +13,18 @@ import (
 )
 
 var RPC = struct {
-	ArithService struct{ Sum, Positive, DoSomething, DoSomethingWithPoint, Multiply, Divide, Pow, Pi, SumArray string }
+	ArithService struct{ Sum, Positive, DoSomething, DoSomethingWithPoint, Multiply, CheckError, CheckZenRPCError, Divide, Pow, Pi, SumArray string }
 	PhoneBook    struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }
 	PrintService struct{ PrintRequiredDefault, PrintOptionalWithDefault, PrintRequired, PrintOptional string }
 }{
-	ArithService: struct{ Sum, Positive, DoSomething, DoSomethingWithPoint, Multiply, Divide, Pow, Pi, SumArray string }{
+	ArithService: struct{ Sum, Positive, DoSomething, DoSomethingWithPoint, Multiply, CheckError, CheckZenRPCError, Divide, Pow, Pi, SumArray string }{
 		Sum:                  "sum",
 		Positive:             "positive",
 		DoSomething:          "dosomething",
 		DoSomethingWithPoint: "dosomethingwithpoint",
 		Multiply:             "multiply",
+		CheckError:           "checkerror",
+		CheckZenRPCError:     "checkzenrpcerror",
 		Divide:               "divide",
 		Pow:                  "pow",
 		Pi:                   "pi",
@@ -124,6 +126,34 @@ func (ArithService) SMD() smd.ServiceInfo {
 					Description: ``,
 					Optional:    false,
 					Type:        smd.Integer,
+				},
+			},
+			"CheckError": {
+				Description: `CheckError throws error is isErr true.`,
+				Parameters: []smd.JSONSchema{
+					{
+						Name:        "isErr",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Boolean,
+					},
+				},
+				Errors: map[int]string{
+					500: "test error",
+				},
+			},
+			"CheckZenRPCError": {
+				Description: `CheckError throws zenrpc error is isErr true.`,
+				Parameters: []smd.JSONSchema{
+					{
+						Name:        "isErr",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Boolean,
+					},
+				},
+				Errors: map[int]string{
+					500: "test error",
 				},
 			},
 			"Divide": {
@@ -286,6 +316,44 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 		}
 
 		resp.Set(s.Multiply(args.A, args.B))
+
+	case RPC.ArithService.CheckError:
+		var args = struct {
+			IsErr bool `json:"isErr"`
+		}{}
+
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"isErr"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		resp.Set(s.CheckError(args.IsErr))
+
+	case RPC.ArithService.CheckZenRPCError:
+		var args = struct {
+			IsErr bool `json:"isErr"`
+		}{}
+
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"isErr"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+			}
+		}
+
+		resp.Set(s.CheckZenRPCError(args.IsErr))
 
 	case RPC.ArithService.Divide:
 		var args = struct {

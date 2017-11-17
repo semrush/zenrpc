@@ -90,6 +90,18 @@ func TestServer_ServeHTTP(t *testing.T) {
 		{
 			in:  `{"jsonrpc": "2.0", "method": "arith.pi", "id": 0 }`,
 			out: `{"jsonrpc":"2.0","id":0,"result":3.141592653589793}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "arith.checkerror", "id": 0, "params": [ false ] }`,
+			out: `{"jsonrpc":"2.0","id":0,"result":null}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "arith.checkerror", "id": 0, "params": [ true ] }`,
+			out: `{"jsonrpc":"2.0","id":0,"error":{"code":-32603,"message":"test"}}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "arith.checkzenrpcerror", "id": 0, "params": [ false ] }`,
+			out: `{"jsonrpc":"2.0","id":0,"result":null}`},
+		{
+			in:  `{"jsonrpc": "2.0", "method": "arith.checkzenrpcerror", "id": 0, "params": [ true ] }`,
+			out: `{"jsonrpc":"2.0","id":0,"error":{"code":500,"message":"test"}}`},
 	}
 
 	for _, c := range tc {

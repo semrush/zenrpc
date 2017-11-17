@@ -34,6 +34,26 @@ func (as ArithService) Multiply(a, b int) int {
 	return a * b
 }
 
+// CheckError throws error is isErr true.
+//zenrpc:500 test error
+func (ArithService) CheckError(isErr bool) error {
+	if isErr {
+		return errors.New("test")
+	}
+
+	return nil
+}
+
+// CheckError throws zenrpc error is isErr true.
+//zenrpc:500 test error
+func (ArithService) CheckZenRPCError(isErr bool) *zenrpc.Error {
+	if isErr {
+		return zenrpc.NewStringError(500, "test")
+	}
+
+	return nil
+}
+
 // Quotient docs
 type Quotient struct {
 	// Quo docs
