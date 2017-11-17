@@ -170,6 +170,10 @@ func (r *Response) Set(v interface{}, er ...error) {
 	r.Version = Version
 	var err error
 
+	if e, ok := v.(error); ok && e != nil {
+		er = []error{e}
+		v = nil
+	}
 	// check for nil *zenrpc.Error
 	// TODO(sergeyfast): add ability to return other error types
 	if len(er) > 0 && er[0] != nil {
