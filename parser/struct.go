@@ -129,9 +129,13 @@ func (s *Struct) parse(pi *PackageInfo) error {
 				},
 			}
 
-			if i == 0 && tag != "" {
+			if i == 0 {
 				// tag only for first name
-				p.Name = tag
+				if tag == "-" {
+					continue
+				} else if tag != "" {
+					p.Name = tag
+				}
 			}
 
 			s.Properties = append(s.Properties, p)
@@ -148,9 +152,6 @@ func parseJsonTag(bl *ast.BasicLit) string {
 
 	tags := bl.Value[1 : len(bl.Value)-1] // remove quotes ``
 	tag := strings.Split(reflect.StructTag(tags).Get("json"), ",")[0]
-	if tag == "-" {
-		tag = ""
-	}
 
 	return tag
 }
