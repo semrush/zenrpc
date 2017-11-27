@@ -11,12 +11,15 @@ import (
 )
 
 const (
+	version = "1.0.1"
+
 	openIssueURL = "https://github.com/semrush/zenrpc/issues/new"
 	githubURL    = "https://github.com/semrush/zenrpc"
 )
 
 func main() {
 	start := time.Now()
+	fmt.Printf("Generator version: %s\n", version)
 
 	var filename string
 	if len(os.Args) > 1 {
