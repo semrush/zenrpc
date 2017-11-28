@@ -9,10 +9,10 @@ import (
 	"strings"
 )
 
-func (pi *PackageInfo) parseImports(imports []*ast.ImportSpec, dir string) error {
+func (pi *PackageInfo) parseImports(imports []*ast.ImportSpec) error {
 	for _, i := range imports {
 		name, path := importNamePath(i)
-		realPath := tryFindPath(path, dir)
+		realPath := tryFindPath(path, pi.Dir)
 		if realPath == "" {
 			// can't find path to package
 			continue
@@ -48,7 +48,7 @@ func (pi *PackageInfo) parseImports(imports []*ast.ImportSpec, dir string) error
 		}
 
 		// collect unique imports from package files and call parseImports once for package
-		if err := pi.parseImports(uniqueImports(pkgImports), dir); err != nil {
+		if err := pi.parseImports(uniqueImports(pkgImports)); err != nil {
 			return err
 		}
 	}

@@ -28,6 +28,8 @@ const (
 
 // PackageInfo represents struct info for XXX_zenrpc.go file generation
 type PackageInfo struct {
+	Dir string
+
 	PackageName string
 	Services    []*Service
 
@@ -131,35 +133,36 @@ func NewPackageInfo() *PackageInfo {
 }
 
 // ParseFiles parse all files associated with package from original file
-func (pi *PackageInfo) Parse(filename string) (string, error) {
-	dir, err := filepath.Abs(filepath.Dir(filename))
-	if err != nil {
-		return dir, err
+func (pi *PackageInfo) Parse(filename string) error {
+	if dir, err := filepath.Abs(filepath.Dir(filename)); err != nil {
+		return err
+	} else {
+		pi.Dir = dir
 	}
 
-	files, err := ioutil.ReadDir(dir)
+	files, err := ioutil.ReadDir(pi.Dir)
 	if err != nil {
-		return dir, err
+		return err
 	}
 
-	if err := pi.parseFiles(files, dir); err != nil {
-		return dir, err
+	if err := pi.parseFiles(files); err != nil {
+		return err
 	}
 
 	// collect scopes from imported packages
 	pi.Imports = uniqueImports(pi.Imports)
 	pi.ImportsForGeneration = filterImports(pi.Imports, pi.StructsNamespacesFromArgs)
 	pi.Imports = filterImports(pi.Imports, uniqueStructsNamespaces(pi.Structs))
-	if err := pi.parseImports(pi.Imports, dir); err != nil {
-		return dir, err
+	if err := pi.parseImports(pi.Imports); err != nil {
+		return err
 	}
 
 	pi.parseStructs()
 
-	return dir, nil
+	return nil
 }
 
-func (pi *PackageInfo) parseFiles(files []os.FileInfo, dir string) error {
+func (pi *PackageInfo) parseFiles(files []os.FileInfo) error {
 	astFiles := []*ast.File{}
 	// first loop: parse files and structs
 	for _, f := range files {
@@ -172,7 +175,7 @@ func (pi *PackageInfo) parseFiles(files []os.FileInfo, dir string) error {
 			continue
 		}
 
-		astFile, err := parser.ParseFile(token.NewFileSet(), filepath.Join(dir, f.Name()), nil, parser.ParseComments)
+		astFile, err := parser.ParseFile(token.NewFileSet(), filepath.Join(pi.Dir, f.Name()), nil, parser.ParseComments)
 		if err != nil {
 			return err
 		}

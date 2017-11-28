@@ -36,8 +36,7 @@ func main() {
 	fmt.Printf("Entrypoint: %s\n", filename)
 
 	pi := parser.NewPackageInfo()
-	dir, err := pi.Parse(filename)
-	if err != nil {
+	if err := pi.Parse(filename); err != nil {
 		printError(err)
 		os.Exit(1)
 	}
@@ -47,7 +46,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	outputFileName, err := generateFile(pi, dir)
+	outputFileName, err := generateFile(pi)
 	if err != nil {
 		printError(err)
 		os.Exit(1)
@@ -71,8 +70,8 @@ func printError(err error) {
 	fmt.Printf("\t%s\n\n", githubURL)
 }
 
-func generateFile(pi *parser.PackageInfo, dir string) (string, error) {
-	outputFileName := filepath.Join(dir, pi.PackageName+parser.GenerateFileSuffix)
+func generateFile(pi *parser.PackageInfo) (string, error) {
+	outputFileName := filepath.Join(pi.Dir, pi.PackageName+parser.GenerateFileSuffix)
 	file, err := os.Create(outputFileName)
 	if err != nil {
 		return outputFileName, err
