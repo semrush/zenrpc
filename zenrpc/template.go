@@ -29,7 +29,7 @@ var (
 			Description: ` + "`{{.Description}}`" + `,
 			{{- if and (eq .SMDType.Type "Object") .SMDType.Ref }}
 				Ref: "#/definitions/{{.SMDType.Ref}}",
-			{{- end}}			
+			{{- end}}
 			{{template "smdType" .SMDType}}
 		},
 	{{ end }}
@@ -68,15 +68,15 @@ import (
 
 var RPC = struct {
 {{ range .Services}}
-	{{.Name}} struct { {{range $i, $e := .Methods }}{{if $i}}, {{end}}{{.Name}}{{ end }} string } 
+	{{.Name}} struct { {{range $i, $e := .Methods }}{{if $i}}, {{end}}{{.Name}}{{ end }} string }
 {{- end }}
-}{	
+}{
 	{{- range .Services}}
-		{{.Name}}: struct { {{range $i, $e := .Methods }} {{if $i}}, {{end}}{{.Name}}{{ end }} string }{ 
+		{{.Name}}: struct { {{range $i, $e := .Methods }} {{if $i}}, {{end}}{{.Name}}{{ end }} string }{
 			{{- range .Methods }}
 				{{.Name}}:   "{{.LowerCaseName}}",
 			{{- end }}
-		}, 	
+		},
 	{{- end }}
 }
 
@@ -85,11 +85,11 @@ var RPC = struct {
 	func ({{.Name}}) SMD() smd.ServiceInfo {
 		return smd.ServiceInfo{
 			Description: ` + "`{{.Description}}`" + `,
-			Methods: map[string]smd.Service{ 
+			Methods: map[string]smd.Service{
 				{{- range .Methods }}
 					"{{.Name}}": {
 						Description: ` + "`{{.Description}}`" + `,
-						Parameters: []smd.JSONSchema{ 
+						Parameters: []smd.JSONSchema{
 						{{- range .Args }}
 							{
 								Name: "{{.Name}}",
@@ -102,17 +102,17 @@ var RPC = struct {
 								{{- template "definitions" definitions .SMDType $.Structs }}
 							},
 						{{- end }}
-						}, 
+						},
 						{{- if .SMDReturn}}
-							Returns: smd.JSONSchema{ 
+							Returns: smd.JSONSchema{
 								Description: ` + "`{{.SMDReturn.Description}}`" + `,
 								Optional:    {{.SMDReturn.HasStar}},
 								{{template "smdType" .SMDReturn.SMDType }}
 								{{- if and (eq .SMDReturn.SMDType.Type "Object") (ne .SMDReturn.SMDType.Ref "")}}
 									{{ template "properties" (index $.Structs .SMDReturn.SMDType.Ref).Properties}}
 								{{- end}}
-								{{- template "definitions" definitions .SMDReturn.SMDType $.Structs }}							
-							}, 
+								{{- template "definitions" definitions .SMDReturn.SMDType $.Structs }}
+							},
 						{{- end}}
 						{{- if .Errors}}
 							Errors: map[int]string{
@@ -128,11 +128,11 @@ var RPC = struct {
 	}
 
 	// Invoke is as generated code from zenrpc cmd
-	func (s {{.Name}}) Invoke(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
+	func (s {{.Name}}) Invoke(ctx context.Context, id *json.RawMessage, method string, params json.RawMessage) zenrpc.Response {
 		resp := zenrpc.Response{}
 		{{ if .HasErrorVariable }}var err error{{ end }}
 
-		switch method { 
+		switch method {
 		{{- range .Methods }}
 			case RPC.{{$s.Name}}.{{.Name}}: {{ if .Args }}
 					var args = struct {
@@ -142,8 +142,8 @@ var RPC = struct {
 					}{}
 
 					if zenrpc.IsArray(params) {
-						if params, err = zenrpc.ConvertToObject([]string{ 
-							{{- range .Args }}"{{.JsonName}}",{{ end -}} 
+						if params, err = zenrpc.ConvertToObject([]string{
+							{{- range .Args }}"{{.JsonName}}",{{ end -}}
 							}, params); err != nil {
 							return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 						}

@@ -37,11 +37,11 @@ const (
 type MiddlewareFunc func(InvokeFunc) InvokeFunc
 
 // InvokeFunc is a function for processing single JSON-RPC 2.0 Request after validation and parsing.
-type InvokeFunc func(context.Context, string, json.RawMessage) Response
+type InvokeFunc func(context.Context, *json.RawMessage, string, json.RawMessage) Response
 
 // Invoker implements service handler.
 type Invoker interface {
-	Invoke(ctx context.Context, method string, params json.RawMessage) Response
+	Invoke(ctx context.Context, id *json.RawMessage, method string, params json.RawMessage) Response
 	SMD() smd.ServiceInfo
 }
 
@@ -228,7 +228,7 @@ func (s Server) processRequest(ctx context.Context, req Request) Response {
 	}
 
 	// invoke func with middleware
-	resp := f(ctx, method, req.Params)
+	resp := f(ctx, req.ID, method, req.Params)
 	resp.ID = req.ID
 
 	return resp
