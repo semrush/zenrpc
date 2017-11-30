@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/s3rj1k/zenrpc"
-	"github.com/s3rj1k/zenrpc/testdata"
+	"github.com/semrush/zenrpc"
+	"github.com/semrush/zenrpc/testdata"
 )
 
 // ArithService description goes here.

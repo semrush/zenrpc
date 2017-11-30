@@ -11,7 +11,7 @@ import (
 	"unicode"
 
 	"github.com/gorilla/websocket"
-	"github.com/s3rj1k/zenrpc/smd"
+	"github.com/semrush/zenrpc/smd"
 )
 
 type contextKey string
