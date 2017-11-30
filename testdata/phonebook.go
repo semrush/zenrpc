@@ -12,7 +12,7 @@ import (
 func SerialPeopleAccess(pbNamespace string) zenrpc.MiddlewareFunc {
 	var lock sync.RWMutex
 	return func(h zenrpc.InvokeFunc) zenrpc.InvokeFunc {
-		return func(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
+		return func(ctx context.Context, id *json.RawMessage, method string, params json.RawMessage) zenrpc.Response {
 			if zenrpc.NamespaceFromContext(ctx) == pbNamespace {
 				switch method {
 				case RPC.PhoneBook.Get, RPC.PhoneBook.ById:
@@ -24,7 +24,7 @@ func SerialPeopleAccess(pbNamespace string) zenrpc.MiddlewareFunc {
 				}
 			}
 
-			return h(ctx, method, params)
+			return h(ctx, id, method, params)
 		}
 	}
 }
