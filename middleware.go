@@ -20,7 +20,7 @@ func Logger(l *log.Logger) MiddlewareFunc {
 			}
 
 			r := h(ctx, id, method, params)
-			l.Printf("ip=%s method=%s.%s duration=%v params=%s err=%s", ip, NamespaceFromContext(ctx), method, time.Since(start), params, r.Error)
+			l.Printf("id=%s ip=%s method=%s.%s duration=%v params=%s err=%s", *id, ip, NamespaceFromContext(ctx), method, time.Since(start), params, r.Error)
 
 			return r
 		}
