@@ -366,7 +366,7 @@ func newIdContext(ctx context.Context, Id *json.RawMessage) context.Context {
 
 // IdFromContext returns request Id from context.
 func IdFromContext(ctx context.Context) *json.RawMessage {
-	if r, ok := ctx.Value(IDKey).(*json.RawMessage); ok {
+	if r, ok := ctx.Value(IdKey).(*json.RawMessage); ok {
 		return r
 	}
 
