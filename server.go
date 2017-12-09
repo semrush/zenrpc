@@ -29,9 +29,9 @@ const (
 	// context key for namespace.
 	namespaceKey contextKey = "namespace"
 
-	// context key for Id.
-	IdKey contextKey = "id"
-	
+	// context key for ID.
+	IDKey contextKey = "id"
+
 	// contentTypeJSON is default content type for HTTP transport.
 	contentTypeJSON = "application/json"
 )
@@ -225,7 +225,7 @@ func (s Server) processRequest(ctx context.Context, req Request) Response {
 	ctx = newNamespaceContext(ctx, namespace)
 
 	// set id to context
-	ctx = newIdContext(ctx, req.ID)
+	ctx = newIDContext(ctx, req.ID)
 
 	// set middleware to func
 	f := InvokeFunc(s.services[namespace].Invoke)
@@ -359,14 +359,14 @@ func NamespaceFromContext(ctx context.Context) string {
 	return ""
 }
 
-// newIdContext creates new context with current request Id.
-func newIdContext(ctx context.Context, Id *json.RawMessage) context.Context {
-	return context.WithValue(ctx, IdKey, Id)
+// newIDContext creates new context with current request ID.
+func newIDContext(ctx context.Context, ID *json.RawMessage) context.Context {
+	return context.WithValue(ctx, IDKey, ID)
 }
 
-// IdFromContext returns request Id from context.
-func IdFromContext(ctx context.Context) *json.RawMessage {
-	if r, ok := ctx.Value(IdKey).(*json.RawMessage); ok {
+// IDFromContext returns request ID from context.
+func IDFromContext(ctx context.Context) *json.RawMessage {
+	if r, ok := ctx.Value(IDKey).(*json.RawMessage); ok {
 		return r
 	}
 
