@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/semrush/zenrpc/parser"
 	"text/template"
+
+	"github.com/semrush/zenrpc/parser"
 )
 
 var (
@@ -74,7 +75,7 @@ var RPC = struct {
 	{{- range .Services}}
 		{{.Name}}: struct { {{range $i, $e := .Methods }} {{if $i}}, {{end}}{{.Name}}{{ end }} string }{ 
 			{{- range .Methods }}
-				{{.Name}}:   "{{.LowerCaseName}}",
+				{{.Name}}:   "{{.SnakeCaseName}}",
 			{{- end }}
 		}, 	
 	{{- end }}
