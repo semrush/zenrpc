@@ -44,6 +44,7 @@ type PackageInfo struct {
 type Service struct {
 	GenDecl     *ast.GenDecl
 	Name        string
+	TitleName   string
 	Methods     []*Method
 	Description string
 }
@@ -51,7 +52,7 @@ type Service struct {
 type Method struct {
 	FuncDecl      *ast.FuncType
 	Name          string
-	LowerCaseName string
+	SnakeCaseName string
 	HasContext    bool
 	Args          []Arg
 	DefaultValues map[string]DefaultValue
@@ -221,10 +222,6 @@ func (pi *PackageInfo) parseServices(f *ast.File) {
 				continue
 			}
 
-			if !ast.IsExported(spec.Name.Name) {
-				continue
-			}
-
 			structType, ok := spec.Type.(*ast.StructType)
 			if !ok {
 				continue
@@ -235,6 +232,7 @@ func (pi *PackageInfo) parseServices(f *ast.File) {
 				pi.Services = append(pi.Services, &Service{
 					GenDecl:     gdecl,
 					Name:        spec.Name.Name,
+					TitleName:   strings.Title(spec.Name.Name),
 					Methods:     []*Method{},
 					Description: parseCommentGroup(spec.Doc),
 				})
@@ -253,7 +251,7 @@ func (pi *PackageInfo) parseMethods(f *ast.File) error {
 		m := Method{
 			FuncDecl:      fdecl.Type,
 			Name:          fdecl.Name.Name,
-			LowerCaseName: strings.ToLower(fdecl.Name.Name),
+			SnakeCaseName: toSnakeCase(fdecl.Name.Name),
 			Args:          []Arg{},
 			DefaultValues: make(map[string]DefaultValue),
 			Returns:       []Return{},
@@ -753,4 +751,19 @@ func hasStar(s string) bool {
 	}
 
 	return false
+}
+
+func toSnakeCase(in string) string {
+	runes := []rune(in)
+	length := len(runes)
+
+	var out []rune
+	for i := 0; i < length; i++ {
+		if i > 0 && unicode.IsUpper(runes[i]) && ((i+1 < length && unicode.IsLower(runes[i+1])) || unicode.IsLower(runes[i-1])) {
+			out = append(out, '_')
+		}
+		out = append(out, unicode.ToLower(runes[i]))
+	}
+
+	return string(out)
 }

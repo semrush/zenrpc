@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/semrush/zenrpc/parser"
 	"text/template"
+
+	"github.com/semrush/zenrpc/parser"
 )
 
 var (
@@ -68,13 +69,13 @@ import (
 
 var RPC = struct {
 {{ range .Services}}
-	{{.Name}} struct { {{range $i, $e := .Methods }}{{if $i}}, {{end}}{{.Name}}{{ end }} string } 
+	{{.TitleName}} struct { {{range $i, $e := .Methods }}{{if $i}}, {{end}}{{.Name}}{{ end }} string } 
 {{- end }}
 }{	
 	{{- range .Services}}
-		{{.Name}}: struct { {{range $i, $e := .Methods }} {{if $i}}, {{end}}{{.Name}}{{ end }} string }{ 
+		{{.TitleName}}: struct { {{range $i, $e := .Methods }} {{if $i}}, {{end}}{{.Name}}{{ end }} string }{ 
 			{{- range .Methods }}
-				{{.Name}}:   "{{.LowerCaseName}}",
+				{{.Name}}:   "{{.SnakeCaseName}}",
 			{{- end }}
 		}, 	
 	{{- end }}
@@ -134,7 +135,7 @@ var RPC = struct {
 
 		switch method { 
 		{{- range .Methods }}
-			case RPC.{{$s.Name}}.{{.Name}}: {{ if .Args }}
+			case RPC.{{$s.TitleName}}.{{.Name}}: {{ if .Args }}
 					var args = struct {
 						{{ range .Args }}
 							{{.CapitalName}} {{if and (not .HasStar) .HasDefaultValue}}*{{end}}{{.Type}} ` + "`json:\"{{.JsonName}}\"`" + `
