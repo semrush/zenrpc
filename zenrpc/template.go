@@ -135,7 +135,7 @@ var RPC = struct {
 
 		switch method { 
 		{{- range .Methods }}
-			case RPC.{{$s.Name}}.{{.Name}}: {{ if .Args }}
+			case RPC.{{$s.TitleName}}.{{.Name}}: {{ if .Args }}
 					var args = struct {
 						{{ range .Args }}
 							{{.CapitalName}} {{if and (not .HasStar) .HasDefaultValue}}*{{end}}{{.Type}} ` + "`json:\"{{.JsonName}}\"`" + `
