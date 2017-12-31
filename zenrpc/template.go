@@ -69,11 +69,11 @@ import (
 
 var RPC = struct {
 {{ range .Services}}
-	{{.Name}} struct { {{range $i, $e := .Methods }}{{if $i}}, {{end}}{{.Name}}{{ end }} string } 
+	{{.TitleName}} struct { {{range $i, $e := .Methods }}{{if $i}}, {{end}}{{.Name}}{{ end }} string } 
 {{- end }}
 }{	
 	{{- range .Services}}
-		{{.Name}}: struct { {{range $i, $e := .Methods }} {{if $i}}, {{end}}{{.Name}}{{ end }} string }{ 
+		{{.TitleName}}: struct { {{range $i, $e := .Methods }} {{if $i}}, {{end}}{{.Name}}{{ end }} string }{ 
 			{{- range .Methods }}
 				{{.Name}}:   "{{.SnakeCaseName}}",
 			{{- end }}
