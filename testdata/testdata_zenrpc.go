@@ -20,29 +20,29 @@ var RPC = struct {
 	ArithService: struct{ Sum, Positive, DoSomething, DoSomethingWithPoint, Multiply, CheckError, CheckZenRPCError, Divide, Pow, Pi, SumArray string }{
 		Sum:                  "sum",
 		Positive:             "positive",
-		DoSomething:          "dosomething",
-		DoSomethingWithPoint: "dosomethingwithpoint",
+		DoSomething:          "do_something",
+		DoSomethingWithPoint: "do_something_with_point",
 		Multiply:             "multiply",
-		CheckError:           "checkerror",
-		CheckZenRPCError:     "checkzenrpcerror",
+		CheckError:           "check_error",
+		CheckZenRPCError:     "check_zen_rpc_error",
 		Divide:               "divide",
 		Pow:                  "pow",
-		Pi:                   "pi",
-		SumArray:             "sumarray",
+		Pi:                   "constants.pi",
+		SumArray:             "sum_array",
 	},
 	PhoneBook: struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }{
 		Get:            "get",
-		ValidateSearch: "validatesearch",
-		ById:           "byid",
+		ValidateSearch: "validate_search",
+		ById:           "by_id",
 		Delete:         "delete",
 		Remove:         "remove",
 		Save:           "save",
 	},
 	PrintService: struct{ PrintRequiredDefault, PrintOptionalWithDefault, PrintRequired, PrintOptional string }{
-		PrintRequiredDefault:     "printrequireddefault",
-		PrintOptionalWithDefault: "printoptionalwithdefault",
-		PrintRequired:            "printrequired",
-		PrintOptional:            "printoptional",
+		PrintRequiredDefault:     "print_required_default",
+		PrintOptionalWithDefault: "print_optional_with_default",
+		PrintRequired:            "print_required",
+		PrintOptional:            "print_optional",
 	},
 }
 
@@ -319,11 +319,11 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 	case RPC.ArithService.CheckError:
 		var args = struct {
-			IsErr bool `json:"isErr"`
+			IsErr bool `json:"is_err"`
 		}{}
 
 		if zenrpc.IsArray(params) {
-			if params, err = zenrpc.ConvertToObject([]string{"isErr"}, params); err != nil {
+			if params, err = zenrpc.ConvertToObject([]string{"is_err"}, params); err != nil {
 				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 			}
 		}
@@ -338,11 +338,11 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 	case RPC.ArithService.CheckZenRPCError:
 		var args = struct {
-			IsErr bool `json:"isErr"`
+			IsErr bool `json:"is_err"`
 		}{}
 
 		if zenrpc.IsArray(params) {
-			if params, err = zenrpc.ConvertToObject([]string{"isErr"}, params); err != nil {
+			if params, err = zenrpc.ConvertToObject([]string{"is_err"}, params); err != nil {
 				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 			}
 		}
@@ -438,7 +438,7 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 func (PhoneBook) SMD() smd.ServiceInfo {
 	return smd.ServiceInfo{
-		Description: ``,
+		Description: `zenrpc`,
 		Methods: map[string]smd.Service{
 			"Get": {
 				Description: `Get returns all people from DB.`,
@@ -482,6 +482,12 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 								},
 							},
 						},
+					},
+					{
+						Name:        "Type",
+						Optional:    true,
+						Description: ``,
+						Type:        smd.Integer,
 					},
 					{
 						Name:        "page",
@@ -862,12 +868,13 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 	case RPC.PhoneBook.Get:
 		var args = struct {
 			Search PersonSearch `json:"search"`
+			Type   *int         `json:"type"`
 			Page   *int         `json:"page"`
 			Count  *int         `json:"count"`
 		}{}
 
 		if zenrpc.IsArray(params) {
-			if params, err = zenrpc.ConvertToObject([]string{"search", "page", "count"}, params); err != nil {
+			if params, err = zenrpc.ConvertToObject([]string{"search", "type", "page", "count"}, params); err != nil {
 				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 			}
 		}
@@ -890,7 +897,7 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 			args.Page = &v
 		}
 
-		resp.Set(s.Get(args.Search, args.Page, args.Count))
+		resp.Set(s.Get(args.Search, args.Type, args.Page, args.Count))
 
 	case RPC.PhoneBook.ValidateSearch:
 		var args = struct {

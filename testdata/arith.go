@@ -3,9 +3,10 @@ package testdata
 import (
 	"context"
 	"errors"
+	"math"
+
 	"github.com/semrush/zenrpc"
 	"github.com/semrush/zenrpc/testdata/model"
-	"math"
 )
 
 type ArithService struct{ zenrpc.Service }
@@ -89,6 +90,7 @@ func (as *ArithService) Pow(base float64, exp *float64) float64 {
 }
 
 // PI returns math.Pi.
+//zenrpc-method-prefix:Constants.
 func (ArithService) Pi() float64 {
 	return math.Pi
 }
@@ -104,4 +106,4 @@ func (as *ArithService) SumArray(array *[]float64) float64 {
 	return sum
 }
 
-//go:generate zenrpc
+//go:generate zenrpc -endpoint-format=snake
