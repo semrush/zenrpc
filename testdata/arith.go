@@ -90,7 +90,7 @@ func (as *ArithService) Pow(base float64, exp *float64) float64 {
 }
 
 // PI returns math.Pi.
-//zenrpc-method-prefix:Constants.
+//zenrpc-method-prefix:Constants
 func (ArithService) Pi() float64 {
 	return math.Pi
 }

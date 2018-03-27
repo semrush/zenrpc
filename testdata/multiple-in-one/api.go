@@ -3,7 +3,6 @@ package multiple_in_one
 import "github.com/devimteam/zenrpc"
 
 type (
-	//zenrpc
 	API struct {
 		ServiceA //zenrpc
 		ServiceB //zenrpc
