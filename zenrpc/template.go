@@ -69,20 +69,24 @@ import (
 
 var RPC = struct {
 {{ range .Services}}
+{{if .IsPublic }}
 	{{.Name}} struct { {{range $i, $e := .Methods }}{{if $i}}, {{end}}{{.Name}}{{ end }} string } 
+{{ end }}
 {{- end }}
 }{	
-	{{- range .Services}}
+	{{- range .Services}}{{if .IsPublic }}
 		{{.Name}}: struct { {{range $i, $e := .Methods }} {{if $i}}, {{end}}{{.Name}}{{ end }} string }{ 
 			{{- range .Methods }}
 				{{.Name}}:  "{{.EndpointName}}",
 			{{- end }}
-		}, 	
+		},
+	{{ end }}
 	{{- end }}
 }
 
 {{ range $s := .Services}}
-
+{{ if .IsPublic }}
+			
 	func ({{.Name}}) SMD() smd.ServiceInfo {
 		return smd.ServiceInfo{
 			Description: ` + "`{{.Description}}`" + `,
@@ -177,5 +181,6 @@ var RPC = struct {
 		return resp
 	}
 {{- end }}
+{{ end }}
 `))
 )

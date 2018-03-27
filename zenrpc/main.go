@@ -21,6 +21,7 @@ const (
 
 var (
 	useStringCase = flag.String("endpoint-format", "lower", "use predeclared string format for methods endpoints: available formats: lower, no, snake, url, dot")
+	scopeSep      = flag.String("scope-sep", ".", "this parameter will be used as separator between scopes")
 	verbose       = flag.Bool("v", true, "when false, allows you to omit service listing")
 	filename      = flag.String("file", "", "TODO")
 )
@@ -34,7 +35,6 @@ func init() {
 
 func main() {
 	start := time.Now()
-	flag.Usage()
 	fmt.Printf("Generator version: %s\n", version)
 
 	if *filename == "" {
@@ -44,7 +44,7 @@ func main() {
 
 	fmt.Printf("Entrypoint: %s\n", *filename)
 
-	pi := parser.NewPackageInfo(*useStringCase)
+	pi := parser.NewPackageInfo(*useStringCase, *scopeSep)
 	if err := pi.Parse(*filename); err != nil {
 		printError(err)
 		os.Exit(1)
