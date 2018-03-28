@@ -12,8 +12,6 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
-
-	"github.com/devimteam/zenrpc/str"
 )
 
 const (
@@ -26,7 +24,6 @@ const (
 	testFileSuffix      = "_test.go"
 	goFileSuffix        = ".go"
 	zenrpcMagicPrefix   = "//zenrpc:"
-	zenrpcMethodPrefix  = "//zenrpc-method-prefix:"
 	zenrpcMagicEmbedded = zenrpcMagicPrefix + "embedded"
 )
 
@@ -49,13 +46,12 @@ type PackageInfo struct {
 }
 
 type Service struct {
-	GenDecl      *ast.GenDecl
-	Name         string
-	Methods      []*Method
-	Description  string
-	globalPrefix string
-	embedded     []*Service
-	IsPublic     bool
+	GenDecl     *ast.GenDecl
+	Name        string
+	Methods     []*Method
+	Description string
+	embedded    []*Service
+	IsPublic    bool
 }
 
 type Method struct {
@@ -96,7 +92,7 @@ type Arg struct {
 	Name            string
 	Type            string
 	CapitalName     string
-	JsonName        string
+	CaseName        string
 	HasStar         bool
 	HasDefaultValue bool
 	Description     string // from magic comment
@@ -142,12 +138,12 @@ type SMDError struct {
 }
 
 var stringCasers = map[string]func(string) string{
-	"":      str.ToLowerCase,
-	"lower": str.ToLowerCase,
-	"no":    str.ToNoCase,
-	"snake": str.ToSnakeCase,
-	"url":   str.ToURLSnakeCase,
-	"dot":   str.ToDotSnakeCase,
+	"":      toLowerCase,
+	"lower": toLowerCase,
+	"no":    toNoCase,
+	"snake": toSnakeCase,
+	"url":   toURLSnakeCase,
+	"dot":   toDotSnakeCase,
 }
 
 func NewPackageInfo(caserName, scopeSep string) *PackageInfo {
@@ -246,22 +242,22 @@ func (pi *PackageInfo) parseFiles(files []os.FileInfo) error {
 	// third loop: link methods of embedded services to main
 	for _, svc := range pi.Services {
 		for _, embedded := range svc.embedded {
-			attachScopedMethods(svc, embedded, pi)
+			pi.attachScopedMethods(svc, embedded)
 		}
 	}
 
 	return nil
 }
 
-func attachScopedMethods(to, service *Service, info *PackageInfo) {
-	service = findServiceByName(service.Name, info.Services)
+func (pi *PackageInfo) attachScopedMethods(to, service *Service) {
+	service = findServiceByName(service.Name, pi.Services)
 	if service == nil {
 		return
 	}
 	for _, m := range service.Methods {
 		next := m.makeCopy()
 		next.scopes = append(next.scopes, service.Name)
-		next.EndpointName = next.ScopeName(info.caser, info.scopeSep)
+		next.EndpointName = next.ScopeName(pi.caser, pi.scopeSep)
 		to.Methods = append(to.Methods, next)
 	}
 }
@@ -305,13 +301,12 @@ func (pi *PackageInfo) parseServices(f *ast.File) {
 				isPublic := a || b || !c
 				embedded := parseEmbeddedServices(structType)
 				pi.Services = append(pi.Services, &Service{
-					GenDecl:      gdecl,
-					Name:         spec.Name.Name,
-					Methods:      []*Method{},
-					Description:  parseCommentGroup(spec.Doc),
-					globalPrefix: parseMethodPrefixFromGroup(spec.Doc),
-					embedded:     embedded,
-					IsPublic:     isPublic,
+					GenDecl:     gdecl,
+					Name:        spec.Name.Name,
+					Methods:     []*Method{},
+					Description: parseCommentGroup(spec.Doc),
+					embedded:    embedded,
+					IsPublic:    isPublic,
 				})
 			}
 
@@ -325,7 +320,6 @@ func parseEmbeddedServices(structType *ast.StructType) (services []*Service) {
 	}
 	for _, field := range structType.Fields.List {
 		if len(field.Names) == 0 && isZenrpcEmbedded(field) {
-			//ast.Print(nil, field)
 			id, ok := field.Type.(*ast.Ident)
 			if !ok {
 				continue
@@ -351,7 +345,7 @@ func stringMap(fn func(string) string, slice []string) []string {
 }
 
 func isZenrpcEmbedded(field *ast.Field) bool {
-	return hasComment(field.Comment, zenrpcComment) || hasComment(field.Doc, zenrpcComment)
+	return hasCommentPrefix(field.Comment, zenrpcComment) || hasCommentPrefix(field.Doc, zenrpcComment)
 }
 
 func (pi *PackageInfo) parseMethods(f *ast.File) error {
@@ -410,7 +404,7 @@ func (pi PackageInfo) String() string {
 }
 
 func (m Method) String() string {
-	result := m.ScopeName(str.ToNoCase, ".")
+	result := m.ScopeName(toNoCase, ".")
 	result += "("
 	for i, a := range m.Args {
 		if i != 0 {
@@ -480,9 +474,6 @@ func (m *Method) linkWithServices(pi *PackageInfo, fdecl *ast.FuncDecl) (names [
 		for _, s := range pi.Services {
 			if s.Name == ident.Name {
 				names = append(names, s.Name)
-				if len(m.scopes) == 0 && s.globalPrefix != "" {
-					m.scopes = append(m.scopes, s.globalPrefix)
-				}
 				s.Methods = append(s.Methods, m)
 				break
 			}
@@ -551,7 +542,7 @@ func (m *Method) parseArguments(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNam
 				Name:        name.Name,
 				Type:        typeName,
 				CapitalName: strings.Title(name.Name),
-				JsonName:    str.ToSnakeCase(name.Name),
+				CaseName:    pi.caser(name.Name),
 				HasStar:     hasStar,
 				SMDType: SMDType{
 					Type:      smdType,
@@ -653,9 +644,6 @@ func (m *Method) parseComments(doc *ast.CommentGroup, pi *PackageInfo) {
 		if strings.HasPrefix(comment.Text, zenrpcMagicPrefix) {
 			m.parseMagicOption(comment, pi)
 		}
-		if strings.HasPrefix(comment.Text, zenrpcMethodPrefix) {
-			m.scopes = append(m.scopes, parseMethodPrefix(comment))
-		}
 	}
 }
 
@@ -715,24 +703,6 @@ func (m *Method) parseMagicOption(comment *ast.Comment, pi *PackageInfo) {
 	}
 }
 
-func parseMethodPrefixFromGroup(comments *ast.CommentGroup) string {
-	if comments == nil {
-		return ""
-	}
-	for _, comment := range comments.List {
-		if strings.HasPrefix(comment.Text, zenrpcMethodPrefix) {
-			fields := strings.Fields(comment.Text)
-			return strings.TrimPrefix(strings.TrimSpace(fields[0]), zenrpcMethodPrefix)
-		}
-	}
-	return ""
-}
-
-func parseMethodPrefix(comment *ast.Comment) string {
-	fields := strings.Fields(comment.Text)
-	return strings.TrimPrefix(strings.TrimSpace(fields[0]), zenrpcMethodPrefix)
-}
-
 func parseCommentGroup(doc *ast.CommentGroup) string {
 	if doc == nil {
 		return ""
@@ -740,7 +710,7 @@ func parseCommentGroup(doc *ast.CommentGroup) string {
 
 	result := ""
 	for _, comment := range doc.List {
-		if strings.HasPrefix(comment.Text, zenrpcMagicPrefix) || strings.HasPrefix(comment.Text, zenrpcMethodPrefix) {
+		if strings.HasPrefix(comment.Text, zenrpcMagicPrefix) {
 			continue
 		}
 

@@ -1,4 +1,4 @@
-package str
+package parser
 
 import (
 	"testing"
@@ -35,8 +35,8 @@ func Test_toSnakeCase(t *testing.T) {
 	}
 	for i, tt := range testCases {
 		t.Run(tt, func(t *testing.T) {
-			if got := ToSnakeCase(tt); got != answers[i] {
-				t.Errorf("ToSnakeCase() = %v, want %v", got, answers[i])
+			if got := toSnakeCase(tt); got != answers[i] {
+				t.Errorf("toSnakeCase() = %v, want %v", got, answers[i])
 			}
 		})
 	}
@@ -60,8 +60,8 @@ func Test_ToURLSnakeCase(t *testing.T) {
 	}
 	for i, tt := range testCases {
 		t.Run(tt, func(t *testing.T) {
-			if got := ToURLSnakeCase(tt); got != answers[i] {
-				t.Errorf("ToURLSnakeCase() = %v, want %v", got, answers[i])
+			if got := toURLSnakeCase(tt); got != answers[i] {
+				t.Errorf("toURLSnakeCase() = %v, want %v", got, answers[i])
 			}
 		})
 	}

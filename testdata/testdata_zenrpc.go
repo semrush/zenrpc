@@ -50,7 +50,7 @@ func (ArithService) SMD() smd.ServiceInfo {
 	return smd.ServiceInfo{
 		Description: ``,
 		Methods: map[string]smd.Service{
-			"Sum": {
+			"sum": {
 				Description: `Sum sums two digits and returns error with error code as result and IP from context.`,
 				Parameters: []smd.JSONSchema{
 					{
@@ -72,7 +72,7 @@ func (ArithService) SMD() smd.ServiceInfo {
 					Type:        smd.Boolean,
 				},
 			},
-			"Positive": {
+			"positive": {
 				Description: ``,
 				Parameters:  []smd.JSONSchema{},
 				Returns: smd.JSONSchema{
@@ -81,11 +81,11 @@ func (ArithService) SMD() smd.ServiceInfo {
 					Type:        smd.Boolean,
 				},
 			},
-			"DoSomething": {
+			"dosomething": {
 				Description: ``,
 				Parameters:  []smd.JSONSchema{},
 			},
-			"DoSomethingWithPoint": {
+			"dosomethingwithpoint": {
 				Description: ``,
 				Parameters: []smd.JSONSchema{
 					{
@@ -106,7 +106,7 @@ func (ArithService) SMD() smd.ServiceInfo {
 					},
 				},
 			},
-			"Multiply": {
+			"multiply": {
 				Description: `Multiply multiples two digits and returns result.`,
 				Parameters: []smd.JSONSchema{
 					{
@@ -128,7 +128,7 @@ func (ArithService) SMD() smd.ServiceInfo {
 					Type:        smd.Integer,
 				},
 			},
-			"CheckError": {
+			"checkerror": {
 				Description: `CheckError throws error is isErr true.`,
 				Parameters: []smd.JSONSchema{
 					{
@@ -142,7 +142,7 @@ func (ArithService) SMD() smd.ServiceInfo {
 					500: "test error",
 				},
 			},
-			"CheckZenRPCError": {
+			"checkzenrpcerror": {
 				Description: `CheckError throws zenrpc error is isErr true.`,
 				Parameters: []smd.JSONSchema{
 					{
@@ -156,7 +156,7 @@ func (ArithService) SMD() smd.ServiceInfo {
 					500: "test error",
 				},
 			},
-			"Divide": {
+			"divide": {
 				Description: `Divide divides two numbers.`,
 				Parameters: []smd.JSONSchema{
 					{
@@ -192,7 +192,7 @@ func (ArithService) SMD() smd.ServiceInfo {
 					-32603: "divide by zero",
 				},
 			},
-			"Pow": {
+			"pow": {
 				Description: `Pow returns x**y, the base-x exponential of y. If Exp is not set then default value is 2.`,
 				Parameters: []smd.JSONSchema{
 					{
@@ -214,7 +214,7 @@ func (ArithService) SMD() smd.ServiceInfo {
 					Type:        smd.Float,
 				},
 			},
-			"Pi": {
+			"pi": {
 				Description: `PI returns math.Pi.`,
 				Parameters:  []smd.JSONSchema{},
 				Returns: smd.JSONSchema{
@@ -223,7 +223,7 @@ func (ArithService) SMD() smd.ServiceInfo {
 					Type:        smd.Float,
 				},
 			},
-			"SumArray": {
+			"sumarray": {
 				Description: `SumArray returns sum all items from array`,
 				Parameters: []smd.JSONSchema{
 					{
@@ -319,11 +319,11 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 	case RPC.ArithService.CheckError:
 		var args = struct {
-			IsErr bool `json:"is_err"`
+			IsErr bool `json:"iserr"`
 		}{}
 
 		if zenrpc.IsArray(params) {
-			if params, err = zenrpc.ConvertToObject([]string{"is_err"}, params); err != nil {
+			if params, err = zenrpc.ConvertToObject([]string{"iserr"}, params); err != nil {
 				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 			}
 		}
@@ -338,11 +338,11 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 	case RPC.ArithService.CheckZenRPCError:
 		var args = struct {
-			IsErr bool `json:"is_err"`
+			IsErr bool `json:"iserr"`
 		}{}
 
 		if zenrpc.IsArray(params) {
-			if params, err = zenrpc.ConvertToObject([]string{"is_err"}, params); err != nil {
+			if params, err = zenrpc.ConvertToObject([]string{"iserr"}, params); err != nil {
 				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 			}
 		}
@@ -440,7 +440,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 	return smd.ServiceInfo{
 		Description: `zenrpc`,
 		Methods: map[string]smd.Service{
-			"Get": {
+			"get": {
 				Description: `Get returns all people from DB.`,
 				Parameters: []smd.JSONSchema{
 					{
@@ -574,7 +574,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					},
 				},
 			},
-			"ValidateSearch": {
+			"validatesearch": {
 				Description: `ValidateSearch returns given search as result.`,
 				Parameters: []smd.JSONSchema{
 					{
@@ -658,7 +658,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					},
 				},
 			},
-			"ById": {
+			"byid": {
 				Description: `ById returns Person from DB.`,
 				Parameters: []smd.JSONSchema{
 					{
@@ -737,7 +737,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					404: "person was not found",
 				},
 			},
-			"Delete": {
+			"delete": {
 				Description: `Delete marks person as deleted.`,
 				Parameters: []smd.JSONSchema{
 					{
@@ -753,7 +753,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					Type:        smd.Boolean,
 				},
 			},
-			"Remove": {
+			"remove": {
 				Description: `Removes deletes person from DB.`,
 				Parameters: []smd.JSONSchema{
 					{
@@ -769,7 +769,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					Type:        smd.Boolean,
 				},
 			},
-			"Save": {
+			"save": {
 				Description: `Save saves person to DB.`,
 				Parameters: []smd.JSONSchema{
 					{
@@ -1012,7 +1012,7 @@ func (PrintService) SMD() smd.ServiceInfo {
 	return smd.ServiceInfo{
 		Description: ``,
 		Methods: map[string]smd.Service{
-			"PrintRequiredDefault": {
+			"printrequireddefault": {
 				Description: ``,
 				Parameters: []smd.JSONSchema{
 					{
@@ -1028,7 +1028,7 @@ func (PrintService) SMD() smd.ServiceInfo {
 					Type:        smd.String,
 				},
 			},
-			"PrintOptionalWithDefault": {
+			"printoptionalwithdefault": {
 				Description: ``,
 				Parameters: []smd.JSONSchema{
 					{
@@ -1044,7 +1044,7 @@ func (PrintService) SMD() smd.ServiceInfo {
 					Type:        smd.String,
 				},
 			},
-			"PrintRequired": {
+			"printrequired": {
 				Description: ``,
 				Parameters: []smd.JSONSchema{
 					{
@@ -1060,7 +1060,7 @@ func (PrintService) SMD() smd.ServiceInfo {
 					Type:        smd.String,
 				},
 			},
-			"PrintOptional": {
+			"printoptional": {
 				Description: ``,
 				Parameters: []smd.JSONSchema{
 					{

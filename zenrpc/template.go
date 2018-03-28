@@ -88,7 +88,7 @@ var RPC = struct {
 			Description: ` + "`{{.Description}}`" + `,
 			Methods: map[string]smd.Service{ 
 				{{- range .Methods }}
-					"{{.Name}}": {
+					"{{.EndpointName}}": {
 						Description: ` + "`{{.Description}}`" + `,
 						Parameters: []smd.JSONSchema{ 
 						{{- range .Args }}
@@ -138,13 +138,13 @@ var RPC = struct {
 			case RPC.{{$s.Name}}.{{.Name}}: {{ if .Args }}
 					var args = struct {
 						{{ range .Args }}
-							{{.CapitalName}} {{if and (not .HasStar) .HasDefaultValue}}*{{end}}{{.Type}} ` + "`json:\"{{.JsonName}}\"`" + `
+							{{.CapitalName}} {{if and (not .HasStar) .HasDefaultValue}}*{{end}}{{.Type}} ` + "`json:\"{{.CaseName}}\"`" + `
 						{{- end }}
 					}{}
 
 					if zenrpc.IsArray(params) {
 						if params, err = zenrpc.ConvertToObject([]string{ 
-							{{- range .Args }}"{{.JsonName}}",{{ end -}} 
+							{{- range .Args }}"{{.CaseName}}",{{ end -}} 
 							}, params); err != nil {
 							return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 						}

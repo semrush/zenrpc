@@ -23,11 +23,11 @@ func (API) SMD() smd.ServiceInfo {
 	return smd.ServiceInfo{
 		Description: ``,
 		Methods: map[string]smd.Service{
-			"MethodA": {
+			"service_a.method_a": {
 				Description: ``,
 				Parameters:  []smd.JSONSchema{},
 			},
-			"MethodB": {
+			"service_b.method_b": {
 				Description: ``,
 				Parameters:  []smd.JSONSchema{},
 				Returns: smd.JSONSchema{

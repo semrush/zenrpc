@@ -1,4 +1,4 @@
-package str
+package parser
 
 import (
 	"strings"
@@ -6,13 +6,13 @@ import (
 )
 
 var (
-	ToSnakeCase    = toSomeCaseWithSep('_', unicode.ToLower)
-	ToURLSnakeCase = toSomeCaseWithSep('-', unicode.ToLower)
-	ToDotSnakeCase = toSomeCaseWithSep('.', unicode.ToLower)
-	ToLowerCase    = strings.ToLower
+	toSnakeCase    = toSomeCaseWithSep('_', unicode.ToLower)
+	toURLSnakeCase = toSomeCaseWithSep('-', unicode.ToLower)
+	toDotSnakeCase = toSomeCaseWithSep('.', unicode.ToLower)
+	toLowerCase    = strings.ToLower
 )
 
-func ToNoCase(s string) string {
+func toNoCase(s string) string {
 	return s
 }
 

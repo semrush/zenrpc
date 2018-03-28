@@ -3,10 +3,11 @@ package zenrpc
 import (
 	"context"
 	"encoding/json"
-	"github.com/prometheus/client_golang/prometheus"
 	"log"
 	"strconv"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Logger is middleware for JSON-RPC 2.0 Server.
