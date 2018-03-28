@@ -2,6 +2,7 @@ package parser
 
 import (
 	"go/ast"
+	"log"
 	"reflect"
 	"strings"
 )
@@ -31,8 +32,25 @@ func (s *Struct) findTypeSpec(pi *PackageInfo) bool {
 	return false
 }
 
+func (s *Struct) markAsParsed(pi *PackageInfo) bool {
+	if s.Properties != nil {
+		return true
+	}
+
+	if _, parsed := pi.ParsedStructs[s.Name]; parsed {
+		return true
+	}
+
+	if pi.ParsedStructs == nil {
+		pi.ParsedStructs = make(map[string]struct{})
+	}
+	pi.ParsedStructs[s.Name] = struct{}{}
+
+	return false
+}
+
 func (s *Struct) parse(pi *PackageInfo) error {
-	if !s.findTypeSpec(pi) || s.Properties != nil {
+	if !s.findTypeSpec(pi) || s.markAsParsed(pi) {
 		// can't find struct implementation
 		// or struct already parsed
 		return nil
@@ -162,39 +180,11 @@ func Definitions(smdType SMDType, structs map[string]*Struct) []*Struct {
 		return nil
 	}
 
-	names := definitions(smdType, structs)
-	if smdType.Type == "Array" {
-		// add object to definitions if type array
-		names = append([]string{smdType.Ref}, names...)
+	m := &uniqStructsBySchema{
+		Structs: structs,
+		Result:  []*Struct{},
 	}
-
-	result := []*Struct{}
-	unique := map[string]struct{}{} // structs in result must be unique
-	for _, name := range names {
-		if s, ok := structs[name]; ok {
-			if _, ok := unique[name]; !ok {
-				result = append(result, s)
-				unique[name] = struct{}{}
-			}
-		}
-	}
-
-	return result
-}
-
-// definitions returns list of struct names used inside smdType
-func definitions(smdType SMDType, structs map[string]*Struct) []string {
-	result := []string{}
-	if s, ok := structs[smdType.Ref]; ok {
-		for _, p := range s.Properties {
-			if p.SMDType.Ref != "" {
-				result = append(result, p.SMDType.Ref)
-				result = append(result, definitions(p.SMDType, structs)...)
-			}
-		}
-	}
-
-	return result
+	return m.List(smdType)
 }
 
 func uniqueStructsNamespaces(structs map[string]*Struct) (set map[string]struct{}) {
@@ -208,4 +198,46 @@ func uniqueStructsNamespaces(structs map[string]*Struct) (set map[string]struct{
 	}
 
 	return
+}
+
+type uniqStructsBySchema struct {
+	Structs map[string]*Struct
+	Result  []*Struct
+}
+
+func (ud uniqStructsBySchema) find(name string) *Struct {
+	return ud.Structs[name]
+}
+
+func (ud uniqStructsBySchema) List(smdType SMDType) []*Struct {
+	ud.analyze(smdType, ud.find(smdType.Ref))
+	log.Println(len(ud.Result))
+	return ud.Result
+}
+
+func (ud *uniqStructsBySchema) analyze(smdType SMDType, s *Struct) {
+	if s == nil {
+		return
+	}
+
+	if ud.analyzed(s.Name) {
+		return
+	}
+
+	ud.Result = append(ud.Result, s)
+
+	for _, p := range s.Properties {
+		if p.SMDType.Ref != "" {
+			ud.analyze(p.SMDType, ud.find(p.SMDType.Ref))
+		}
+	}
+}
+
+func (ud uniqStructsBySchema) analyzed(name string) bool {
+	for _, s := range ud.Result {
+		if s.Name == name {
+			return true
+		}
+	}
+	return false
 }

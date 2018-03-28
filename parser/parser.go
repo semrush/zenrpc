@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"unicode"
 	"unicode/utf8"
 )
@@ -33,9 +34,11 @@ type PackageInfo struct {
 	PackageName string
 	Services    []*Service
 
-	Scopes  map[string][]*ast.Scope // key - import name, value - array of scopes from each package file
-	Structs map[string]*Struct
-	Imports []*ast.ImportSpec
+	Scopes             map[string][]*ast.Scope // key - import name, value - array of scopes from each package file
+	Structs            map[string]*Struct
+	ParsedStructs      map[string]struct{}
+	ParsedStructsMutex sync.RWMutex
+	Imports            []*ast.ImportSpec
 
 	StructsNamespacesFromArgs map[string]struct{} // set of structs names from arguments for printing imports
 	ImportsForGeneration      []*ast.ImportSpec
