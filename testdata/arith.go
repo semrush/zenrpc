@@ -3,9 +3,10 @@ package testdata
 import (
 	"context"
 	"errors"
+	"math"
+
 	"github.com/semrush/zenrpc"
 	"github.com/semrush/zenrpc/testdata/model"
-	"math"
 )
 
 type ArithService struct{ zenrpc.Service }

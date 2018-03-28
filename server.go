@@ -127,7 +127,7 @@ func (s *Server) SetLogger(printer Printer) {
 
 // process process JSON-RPC 2.0 message, invokes correct method for namespace and returns JSON-RPC 2.0 Response.
 func (s *Server) process(ctx context.Context, message json.RawMessage) interface{} {
-	requests := []Request{}
+	var requests []Request
 	// parsing batch requests
 	batch := IsArray(message)
 
@@ -293,7 +293,7 @@ func IsArray(message json.RawMessage) bool {
 func ConvertToObject(keys []string, params json.RawMessage) (json.RawMessage, error) {
 	paramCount := len(keys)
 
-	rawParams := []json.RawMessage{}
+	var rawParams []json.RawMessage
 	if err := json.Unmarshal(params, &rawParams); err != nil {
 		return nil, err
 	}
@@ -372,4 +372,3 @@ func IDFromContext(ctx context.Context) *json.RawMessage {
 
 	return nil
 }
-

@@ -43,7 +43,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var data interface{}
 
 	if err != nil {
-		s.printf("read request body failed with err=%v", err)
+		s.printf("read request body error: %v", err)
 		data = NewResponseError(nil, ParseError, "", nil)
 	} else {
 		data = s.process(newRequestContext(r.Context(), r), b)
@@ -62,10 +62,10 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// marshals data and write it to client.
 	if resp, err := json.Marshal(data); err != nil {
-		s.printf("marshal json response failed with err=%v", err)
+		s.printf("marshal json response error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	} else if _, err := w.Write(resp); err != nil {
-		s.printf("write response failed with err=%v", err)
+		s.printf("write response error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 
@@ -77,7 +77,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s Server) ServeWS(w http.ResponseWriter, r *http.Request) {
 	c, err := s.options.Upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		s.printf("upgrade connection failed with err=%v", err)
+		s.printf("upgrade connection error: %v", err)
 		return
 	}
 	defer c.Close()
@@ -91,19 +91,19 @@ func (s Server) ServeWS(w http.ResponseWriter, r *http.Request) {
 		}
 		// abnormal closure
 		if err != nil {
-			s.printf("read message failed with err=%v", err)
+			s.printf("read message error: %v", err)
 			break
 		}
 
 		data, err := json.Marshal(s.process(newRequestContext(r.Context(), r), message))
 		if err != nil {
-			s.printf("marshal json response failed with err=%v", err)
+			s.printf("marshal json response error: %v", err)
 			c.WriteControl(websocket.CloseInternalServerErr, nil, time.Time{})
 			break
 		}
 
 		if err = c.WriteMessage(mt, data); err != nil {
-			s.printf("write response failed with err=%v", err)
+			s.printf("write response error: %v", err)
 			c.WriteControl(websocket.CloseInternalServerErr, nil, time.Time{})
 			break
 		}
