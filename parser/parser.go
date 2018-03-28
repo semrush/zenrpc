@@ -17,14 +17,13 @@ import (
 const (
 	GenerateFileSuffix = "_zenrpc.go"
 
-	zenrpcComment       = "//zenrpc"
-	zenrpcService       = "zenrpc.Service"
-	contextTypeName     = "context.Context"
-	errorTypeName       = "zenrpc.Error"
-	testFileSuffix      = "_test.go"
-	goFileSuffix        = ".go"
-	zenrpcMagicPrefix   = "//zenrpc:"
-	zenrpcMagicEmbedded = zenrpcMagicPrefix + "embedded"
+	zenrpcComment     = "//zenrpc"
+	zenrpcService     = "zenrpc.Service"
+	contextTypeName   = "context.Context"
+	errorTypeName     = "zenrpc.Error"
+	testFileSuffix    = "_test.go"
+	goFileSuffix      = ".go"
+	zenrpcMagicPrefix = "//zenrpc:"
 )
 
 // PackageInfo represents struct info for XXX_zenrpc.go file generation
@@ -41,8 +40,7 @@ type PackageInfo struct {
 	StructsNamespacesFromArgs map[string]struct{} // set of structs names from arguments for printing imports
 	ImportsForGeneration      []*ast.ImportSpec
 
-	caser    func(string) string
-	scopeSep string
+	caser func(string) string
 }
 
 type Service struct {
@@ -50,15 +48,12 @@ type Service struct {
 	Name        string
 	Methods     []*Method
 	Description string
-	embedded    []*Service
-	IsPublic    bool
 }
 
 type Method struct {
 	FuncDecl      *ast.FuncType
 	Name          string
 	EndpointName  string
-	scopes        []string
 	HasContext    bool
 	Args          []Arg
 	DefaultValues map[string]DefaultValue
@@ -67,17 +62,6 @@ type Method struct {
 	Description   string
 
 	Errors []SMDError // errors for documentation in SMD
-}
-
-func (m Method) makeCopy() *Method {
-	t := m.scopes
-	m.scopes = make([]string, len(t))
-	copy(m.scopes, t)
-	return &m
-}
-
-func (m Method) ScopeName(caser func(string) string, sep string) string {
-	return joinWithCaser(caser, append(m.scopes, m.Name), sep)
 }
 
 type DefaultValue struct {
@@ -97,6 +81,10 @@ type Arg struct {
 	HasDefaultValue bool
 	Description     string // from magic comment
 	SMDType         SMDType
+}
+
+func (a Arg) String() string {
+	return strings.Join([]string{a.Name, a.Type}, " ")
 }
 
 type Return struct {
@@ -142,11 +130,9 @@ var stringCasers = map[string]func(string) string{
 	"lower": toLowerCase,
 	"no":    toNoCase,
 	"snake": toSnakeCase,
-	"url":   toURLSnakeCase,
-	"dot":   toDotSnakeCase,
 }
 
-func NewPackageInfo(caserName, scopeSep string) *PackageInfo {
+func NewPackageInfo(caserName string) *PackageInfo {
 	caser, ok := stringCasers[caserName]
 	if !ok {
 		panic(caserName + " is not an available format")
@@ -161,8 +147,7 @@ func NewPackageInfo(caserName, scopeSep string) *PackageInfo {
 		StructsNamespacesFromArgs: make(map[string]struct{}),
 		ImportsForGeneration:      []*ast.ImportSpec{},
 
-		caser:    caser,
-		scopeSep: scopeSep,
+		caser: caser,
 	}
 }
 
@@ -239,35 +224,6 @@ func (pi *PackageInfo) parseFiles(files []os.FileInfo) error {
 		}
 	}
 
-	// third loop: link methods of embedded services to main
-	for _, svc := range pi.Services {
-		for _, embedded := range svc.embedded {
-			pi.attachScopedMethods(svc, embedded)
-		}
-	}
-
-	return nil
-}
-
-func (pi *PackageInfo) attachScopedMethods(to, service *Service) {
-	service = findServiceByName(service.Name, pi.Services)
-	if service == nil {
-		return
-	}
-	for _, m := range service.Methods {
-		next := m.makeCopy()
-		next.scopes = append(next.scopes, service.Name)
-		next.EndpointName = next.ScopeName(pi.caser, pi.scopeSep)
-		to.Methods = append(to.Methods, next)
-	}
-}
-
-func findServiceByName(name string, svcs []*Service) *Service {
-	for i := range svcs {
-		if svcs[i].Name == name {
-			return svcs[i]
-		}
-	}
 	return nil
 }
 
@@ -293,59 +249,17 @@ func (pi *PackageInfo) parseServices(f *ast.File) {
 				continue
 			}
 
-			// Check that struct is our zenrpc struct, or it marked as embedded.
-			a, b, c := hasZenrpcComment(spec, zenrpcComment), hasZenrpcService(structType), hasZenrpcComment(spec, zenrpcMagicEmbedded)
-			// Declaration SHOULD has zenrpcComment OR embedded Service OR zenrpcMagicEmbedded to be parsed.
-			if a || b || c {
-				// Declaration SHOULD has zenrpcComment OR embedded Service OR NOT zenrpcMagicEmbedded to be generated.
-				isPublic := a || b || !c
-				embedded := parseEmbeddedServices(structType)
+			// check that struct is our zenrpc struct
+			if hasZenrpcComment(spec, zenrpcComment) || hasZenrpcService(structType) {
 				pi.Services = append(pi.Services, &Service{
 					GenDecl:     gdecl,
 					Name:        spec.Name.Name,
 					Methods:     []*Method{},
 					Description: parseCommentGroup(spec.Doc),
-					embedded:    embedded,
-					IsPublic:    isPublic,
 				})
 			}
-
 		}
 	}
-}
-
-func parseEmbeddedServices(structType *ast.StructType) (services []*Service) {
-	if structType == nil || structType.Fields == nil {
-		return nil
-	}
-	for _, field := range structType.Fields.List {
-		if len(field.Names) == 0 && isZenrpcEmbedded(field) {
-			id, ok := field.Type.(*ast.Ident)
-			if !ok {
-				continue
-			}
-			services = append(services, &Service{
-				Name: id.Name,
-			})
-		}
-	}
-	return services
-}
-
-func joinWithCaser(caser func(string) string, strs []string, sep string) string {
-	return strings.Join(stringMap(caser, strs), sep)
-}
-
-// stringMap use functional map pattern to slice of strings. This function is not pure.
-func stringMap(fn func(string) string, slice []string) []string {
-	for i := range slice {
-		slice[i] = fn(slice[i])
-	}
-	return slice
-}
-
-func isZenrpcEmbedded(field *ast.Field) bool {
-	return hasCommentPrefix(field.Comment, zenrpcComment) || hasCommentPrefix(field.Doc, zenrpcComment)
 }
 
 func (pi *PackageInfo) parseMethods(f *ast.File) error {
@@ -358,6 +272,7 @@ func (pi *PackageInfo) parseMethods(f *ast.File) error {
 		m := Method{
 			FuncDecl:      fdecl.Type,
 			Name:          fdecl.Name.Name,
+			EndpointName:  pi.caser(fdecl.Name.Name),
 			Args:          []Arg{},
 			DefaultValues: make(map[string]DefaultValue),
 			Returns:       []Return{},
@@ -382,7 +297,6 @@ func (pi *PackageInfo) parseMethods(f *ast.File) error {
 
 		// parse default values
 		m.parseComments(fdecl.Doc, pi)
-		m.EndpointName = m.ScopeName(pi.caser, pi.scopeSep)
 	}
 
 	return nil
@@ -391,9 +305,6 @@ func (pi *PackageInfo) parseMethods(f *ast.File) error {
 func (pi PackageInfo) String() string {
 	result := fmt.Sprintf("Generated services for package %s:\n", pi.PackageName)
 	for _, s := range pi.Services {
-		if !s.IsPublic {
-			continue
-		}
 		result += fmt.Sprintf("- %s\n", s.Name)
 		for _, m := range s.Methods {
 			result += fmt.Sprintf("  • %s\n", m)
@@ -404,22 +315,17 @@ func (pi PackageInfo) String() string {
 }
 
 func (m Method) String() string {
-	result := m.ScopeName(toNoCase, ".")
-	result += "("
-	for i, a := range m.Args {
-		if i != 0 {
-			result += ", "
-		}
-
-		result += fmt.Sprintf("%s %s", a.Name, a.Type)
+	var argsStr []string
+	for _, a := range m.Args {
+		argsStr = append(argsStr, a.String())
 	}
-	result += ") "
+	result := m.Name + "(" + strings.Join(argsStr, ", ") + ")"
 
 	// no return args
 	if len(m.Returns) == 0 {
 		return result
 	}
-
+	result += " "
 	// only one return arg without name
 	if len(m.Returns) == 1 && len(m.Returns[0].Name) == 0 {
 		result += m.Returns[0].Type
@@ -427,18 +333,15 @@ func (m Method) String() string {
 	}
 
 	// return
-	result += "("
-	for i, a := range m.Returns {
-		if i != 0 {
-			result += fmt.Sprintf(", ")
-		}
-
+	var returnStr []string
+	for _, a := range m.Returns {
 		if len(a.Name) == 0 {
-			result += a.Type
+			returnStr = append(returnStr, a.Type)
 		} else {
-			result += fmt.Sprintf("%s %s", a.Name, a.Type)
+			returnStr = append(returnStr, fmt.Sprintf("%s %s", a.Name, a.Type))
 		}
 	}
+	result += "(" + strings.Join(returnStr, ", ") + ")"
 	return result
 }
 

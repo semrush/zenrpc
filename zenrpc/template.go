@@ -3,7 +3,7 @@ package main
 import (
 	"text/template"
 
-	"github.com/devimteam/zenrpc/parser"
+	"github.com/semrush/zenrpc/parser"
 )
 
 var (
@@ -68,21 +68,21 @@ import (
 )
 
 var RPC = struct {
-{{ range .Services}}{{if .IsPublic }}
-	{{.Name}} struct { {{range $i, $e := .Methods }}{{if $i}}, {{end}}{{.Name}}{{ end }} string }
-{{- end }}{{- end }}
+{{ range .Services}}
+	{{.Name}} struct { {{range $i, $e := .Methods }}{{if $i}}, {{end}}{{.Name}}{{ end }} string } 
+{{- end }}
 }{	
-	{{- range .Services}}{{if .IsPublic }}
+	{{- range .Services}}
 		{{.Name}}: struct { {{range $i, $e := .Methods }} {{if $i}}, {{end}}{{.Name}}{{ end }} string }{ 
 			{{- range .Methods }}
 				{{.Name}}:  "{{.EndpointName}}",
 			{{- end }}
-		},
-	{{- end }}{{- end }}
+		}, 	
+	{{- end }}
 }
 
-{{ range $s := .Services}}{{ if .IsPublic }}
-			
+{{ range $s := .Services}}
+
 	func ({{.Name}}) SMD() smd.ServiceInfo {
 		return smd.ServiceInfo{
 			Description: ` + "`{{.Description}}`" + `,
@@ -176,6 +176,6 @@ var RPC = struct {
 
 		return resp
 	}
-{{- end }}{{- end }}
+{{- end }}
 `))
 )

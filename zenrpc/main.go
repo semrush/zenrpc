@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/devimteam/zenrpc/parser"
+	"github.com/semrush/zenrpc/parser"
 )
 
 const (
@@ -20,14 +20,14 @@ const (
 )
 
 var (
-	useStringCase = flag.String("endpoint-format", "lower", "use predeclared string format for methods endpoints: available formats: lower, no, snake, url, dot")
-	scopeSep      = flag.String("scope-sep", ".", "this parameter will be used as separator between scopes")
+	useStringCase = flag.String("endpoint-format", "lower", "use predeclared string format for methods endpoints: available formats: lower, no, snake")
 	verbose       = flag.Bool("v", true, "when false, allows you to omit service listing")
-	filename      = flag.String("file", "", "TODO")
+	filename      = flag.String("file", "", "is used for passing file name clearly and directly.")
 )
 
 func init() {
 	flag.Parse()
+	flag.CommandLine.SetOutput(os.Stdout)
 	if *filename == "" {
 		*filename = os.Getenv("GOFILE")
 	}
@@ -44,7 +44,7 @@ func main() {
 
 	fmt.Printf("Entrypoint: %s\n", *filename)
 
-	pi := parser.NewPackageInfo(*useStringCase, *scopeSep)
+	pi := parser.NewPackageInfo(*useStringCase)
 	if err := pi.Parse(*filename); err != nil {
 		printError(err)
 		os.Exit(1)
@@ -79,7 +79,8 @@ func printError(err error) {
 	fmt.Printf("\t%s\n", openIssueURL)
 	fmt.Println("For more information, see:")
 	fmt.Printf("\t%s\n\n", githubURL)
-	flag.Usage()
+	fmt.Printf("Usage of %s:\n", os.Args[0])
+	flag.PrintDefaults()
 }
 
 func generateFile(pi *parser.PackageInfo) (string, error) {

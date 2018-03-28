@@ -6,10 +6,8 @@ import (
 )
 
 var (
-	toSnakeCase    = toSomeCaseWithSep('_', unicode.ToLower)
-	toURLSnakeCase = toSomeCaseWithSep('-', unicode.ToLower)
-	toDotSnakeCase = toSomeCaseWithSep('.', unicode.ToLower)
-	toLowerCase    = strings.ToLower
+	toSnakeCase = toSomeCaseWithSep('_', unicode.ToLower)
+	toLowerCase = strings.ToLower
 )
 
 func toNoCase(s string) string {
