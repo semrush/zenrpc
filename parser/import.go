@@ -13,7 +13,7 @@ func (pi *PackageInfo) parseImports(imports []*ast.ImportSpec) error {
 	for _, i := range imports {
 		name, path := importNamePath(i)
 		realPath := tryFindPath(path, pi.Dir)
-		if realPath == "" {
+		if realPath == "" || name == "_" {
 			// can't find path to package
 			continue
 		}
