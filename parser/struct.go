@@ -2,7 +2,6 @@ package parser
 
 import (
 	"go/ast"
-	"log"
 	"reflect"
 	"strings"
 )
@@ -211,7 +210,6 @@ func (ud uniqStructsBySchema) find(name string) *Struct {
 
 func (ud uniqStructsBySchema) List(smdType SMDType) []*Struct {
 	ud.analyze(smdType, ud.find(smdType.Ref))
-	log.Println(len(ud.Result))
 	return ud.Result
 }
 
