@@ -41,28 +41,3 @@ func Test_toSnakeCase(t *testing.T) {
 		})
 	}
 }
-
-func Test_ToURLSnakeCase(t *testing.T) {
-	answers := []string{
-		"string-service",
-		"string-service",
-		"stringservice",
-		"string_service",
-		"string_service",
-		"string_-service",
-		"json-service",
-		"json-service",
-		"json-service-v2",
-		"json-service-v2",
-	}
-	if len(testCases) != len(answers) {
-		t.Fatal("different amount of test cases and expected answers")
-	}
-	for i, tt := range testCases {
-		t.Run(tt, func(t *testing.T) {
-			if got := toURLSnakeCase(tt); got != answers[i] {
-				t.Errorf("toURLSnakeCase() = %v, want %v", got, answers[i])
-			}
-		})
-	}
-}

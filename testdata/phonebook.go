@@ -96,7 +96,7 @@ type (
 // Get returns all people from DB.
 //zenrpc:page=0 current page
 //zenrpc:count=50 page size
-func (pb PhoneBook) Get(search PersonSearch, Type, page, count *int) (res []*Person) {
+func (pb PhoneBook) Get(search PersonSearch, page, count *int) (res []*Person) {
 	for _, p := range pb.DB {
 		res = append(res, p)
 	}

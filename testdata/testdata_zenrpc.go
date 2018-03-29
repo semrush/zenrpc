@@ -93,16 +93,7 @@ func (ArithService) SMD() smd.ServiceInfo {
 						Optional:    false,
 						Description: ``,
 						Type:        smd.Object,
-						Properties: map[string]smd.Property{
-							"X": {
-								Description: `coordinate`,
-								Type:        smd.Integer,
-							},
-							"Y": {
-								Description: `coordinate`,
-								Type:        smd.Integer,
-							},
-						},
+						Properties:  map[string]smd.Property{},
 					},
 				},
 			},
@@ -438,7 +429,7 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 func (PhoneBook) SMD() smd.ServiceInfo {
 	return smd.ServiceInfo{
-		Description: `zenrpc`,
+		Description: ``,
 		Methods: map[string]smd.Service{
 			"get": {
 				Description: `Get returns all people from DB.`,
@@ -482,12 +473,6 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 								},
 							},
 						},
-					},
-					{
-						Name:        "Type",
-						Optional:    true,
-						Description: ``,
-						Type:        smd.Integer,
 					},
 					{
 						Name:        "page",
@@ -868,13 +853,12 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 	case RPC.PhoneBook.Get:
 		var args = struct {
 			Search PersonSearch `json:"search"`
-			Type   *int         `json:"type"`
 			Page   *int         `json:"page"`
 			Count  *int         `json:"count"`
 		}{}
 
 		if zenrpc.IsArray(params) {
-			if params, err = zenrpc.ConvertToObject([]string{"search", "type", "page", "count"}, params); err != nil {
+			if params, err = zenrpc.ConvertToObject([]string{"search", "page", "count"}, params); err != nil {
 				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 			}
 		}
@@ -897,7 +881,7 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 			args.Page = &v
 		}
 
-		resp.Set(s.Get(args.Search, args.Type, args.Page, args.Count))
+		resp.Set(s.Get(args.Search, args.Page, args.Count))
 
 	case RPC.PhoneBook.ValidateSearch:
 		var args = struct {

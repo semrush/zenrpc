@@ -20,9 +20,9 @@ const (
 )
 
 var (
-	useStringCase = flag.String("endpoint-format", "lower", "use predeclared string format for methods endpoints: available formats: lower, no, snake")
-	verbose       = flag.Bool("v", true, "when false, allows you to omit service listing")
-	filename      = flag.String("file", "", "is used for passing file name clearly and directly.")
+	useStringCase = flag.Bool("snake-case", false, "Generate names as snake_case instead of lower case.")
+	verbose       = flag.Bool("v", true, "When false, allows you to omit service listing.")
+	filename      = flag.String("file", "", "Is used for passing file name clearly and directly.")
 )
 
 func init() {

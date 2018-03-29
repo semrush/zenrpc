@@ -125,17 +125,10 @@ type SMDError struct {
 	Description string
 }
 
-var stringCasers = map[string]func(string) string{
-	"":      toLowerCase,
-	"lower": toLowerCase,
-	"no":    toNoCase,
-	"snake": toSnakeCase,
-}
-
-func NewPackageInfo(caserName string) *PackageInfo {
-	caser, ok := stringCasers[caserName]
-	if !ok {
-		panic(caserName + " is not an available format")
+func NewPackageInfo(useSnakeCase bool) *PackageInfo {
+	caser := toLowerCase
+	if useSnakeCase {
+		caser = toSnakeCase
 	}
 	return &PackageInfo{
 		Services: []*Service{},
@@ -613,7 +606,7 @@ func parseCommentGroup(doc *ast.CommentGroup) string {
 
 	result := ""
 	for _, comment := range doc.List {
-		if strings.HasPrefix(comment.Text, zenrpcMagicPrefix) {
+		if strings.HasPrefix(comment.Text, zenrpcComment) {
 			continue
 		}
 
