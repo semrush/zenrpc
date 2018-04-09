@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"unicode"
-	"unicode/utf8"
 )
 
 const (
@@ -40,7 +38,8 @@ type PackageInfo struct {
 	StructsNamespacesFromArgs map[string]struct{} // set of structs names from arguments for printing imports
 	ImportsForGeneration      []*ast.ImportSpec
 
-	caser func(string) string
+	caser    func(string) string
+	argCaser func(string) string
 }
 
 type Service struct {
@@ -127,8 +126,10 @@ type SMDError struct {
 
 func NewPackageInfo(useSnakeCase bool) *PackageInfo {
 	caser := toLowerCase
+	argCaser := toNoCase
 	if useSnakeCase {
 		caser = toSnakeCase
+		argCaser = toSnakeCase
 	}
 	return &PackageInfo{
 		Services: []*Service{},
@@ -140,7 +141,8 @@ func NewPackageInfo(useSnakeCase bool) *PackageInfo {
 		StructsNamespacesFromArgs: make(map[string]struct{}),
 		ImportsForGeneration:      []*ast.ImportSpec{},
 
-		caser: caser,
+		caser:    caser,
+		argCaser: argCaser,
 	}
 }
 
@@ -438,7 +440,7 @@ func (m *Method) parseArguments(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNam
 				Name:        name.Name,
 				Type:        typeName,
 				CapitalName: strings.Title(name.Name),
-				CaseName:    pi.caser(name.Name),
+				CaseName:    pi.argCaser(name.Name),
 				HasStar:     hasStar,
 				SMDType: SMDType{
 					Type:      smdType,
@@ -722,18 +724,6 @@ func hasZenrpcComment(spec *ast.TypeSpec, comment string) bool {
 	return hasComment(spec.Comment, comment) || hasComment(spec.Doc, comment)
 }
 
-func hasCommentPrefix(group *ast.CommentGroup, text string) bool {
-	if group == nil {
-		return false
-	}
-	for _, line := range group.List {
-		if strings.HasPrefix(line.Text, text) {
-			return true
-		}
-	}
-	return false
-}
-
 func hasComment(group *ast.CommentGroup, text string) bool {
 	if group == nil {
 		return false
@@ -764,14 +754,6 @@ func hasZenrpcService(structType *ast.StructType) bool {
 	}
 
 	return false
-}
-
-func lowerFirst(s string) string {
-	if s == "" {
-		return ""
-	}
-	r, n := utf8.DecodeRuneInString(s)
-	return string(unicode.ToLower(r)) + s[n:]
 }
 
 func hasStar(s string) bool {

@@ -93,7 +93,16 @@ func (ArithService) SMD() smd.ServiceInfo {
 						Optional:    false,
 						Description: ``,
 						Type:        smd.Object,
-						Properties:  map[string]smd.Property{},
+						Properties: map[string]smd.Property{
+							"X": {
+								Description: `coordinate`,
+								Type:        smd.Integer,
+							},
+							"Y": {
+								Description: `coordinate`,
+								Type:        smd.Integer,
+							},
+						},
 					},
 				},
 			},
@@ -310,11 +319,11 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 	case RPC.ArithService.CheckError:
 		var args = struct {
-			IsErr bool `json:"iserr"`
+			IsErr bool `json:"isErr"`
 		}{}
 
 		if zenrpc.IsArray(params) {
-			if params, err = zenrpc.ConvertToObject([]string{"iserr"}, params); err != nil {
+			if params, err = zenrpc.ConvertToObject([]string{"isErr"}, params); err != nil {
 				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 			}
 		}
@@ -329,11 +338,11 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 	case RPC.ArithService.CheckZenRPCError:
 		var args = struct {
-			IsErr bool `json:"iserr"`
+			IsErr bool `json:"isErr"`
 		}{}
 
 		if zenrpc.IsArray(params) {
-			if params, err = zenrpc.ConvertToObject([]string{"iserr"}, params); err != nil {
+			if params, err = zenrpc.ConvertToObject([]string{"isErr"}, params); err != nil {
 				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
 			}
 		}
