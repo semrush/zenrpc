@@ -50,15 +50,16 @@ type Service struct {
 }
 
 type Method struct {
-	FuncDecl      *ast.FuncType
-	Name          string
-	EndpointName  string
-	HasContext    bool
-	Args          []Arg
-	DefaultValues map[string]DefaultValue
-	Returns       []Return
-	SMDReturn     *SMDReturn // return for generate smd schema; pointer for nil check
-	Description   string
+	FuncDecl           *ast.FuncType
+	Name               string
+	EndpointName       string
+	SchemaEndpointName string
+	HasContext         bool
+	Args               []Arg
+	DefaultValues      map[string]DefaultValue
+	Returns            []Return
+	SMDReturn          *SMDReturn // return for generate smd schema; pointer for nil check
+	Description        string
 
 	Errors []SMDError // errors for documentation in SMD
 }
@@ -265,14 +266,15 @@ func (pi *PackageInfo) parseMethods(f *ast.File) error {
 		}
 
 		m := Method{
-			FuncDecl:      fdecl.Type,
-			Name:          fdecl.Name.Name,
-			EndpointName:  pi.caser(fdecl.Name.Name),
-			Args:          []Arg{},
-			DefaultValues: make(map[string]DefaultValue),
-			Returns:       []Return{},
-			Description:   parseCommentGroup(fdecl.Doc),
-			Errors:        []SMDError{},
+			FuncDecl:           fdecl.Type,
+			Name:               fdecl.Name.Name,
+			EndpointName:       pi.caser(fdecl.Name.Name),
+			SchemaEndpointName: pi.argCaser(fdecl.Name.Name),
+			Args:               []Arg{},
+			DefaultValues:      make(map[string]DefaultValue),
+			Returns:            []Return{},
+			Description:        parseCommentGroup(fdecl.Doc),
+			Errors:             []SMDError{},
 		}
 
 		serviceNames := m.linkWithServices(pi, fdecl)
