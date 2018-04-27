@@ -40,6 +40,13 @@ func (s *Struct) parse(pi *PackageInfo) error {
 
 	s.Properties = []Property{}
 	for _, field := range s.StructType.Fields.List {
+		tag := parseJsonTag(field.Tag)
+
+		// do not parse tags that ignored in json
+		if tag == "-" {
+			continue
+		}
+
 		// parse embedded struct
 		if field.Names == nil {
 			if embeddedS := parseStruct(field.Type); embeddedS != nil {
@@ -102,8 +109,6 @@ func (s *Struct) parse(pi *PackageInfo) error {
 				return err
 			}
 		}
-
-		tag := parseJsonTag(field.Tag)
 
 		// description
 		description := parseCommentGroup(field.Doc)
