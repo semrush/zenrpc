@@ -81,6 +81,8 @@ func (s Server) ServeWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer c.Close()
+	
+	r = r.WithContext(context.WithValue(r.Context(), "__ws_connect", c))
 
 	for {
 		mt, message, err := c.ReadMessage()
