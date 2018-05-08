@@ -82,7 +82,8 @@ func (s Server) ServeWS(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.Close()
 	
-	r = r.WithContext(context.WithValue(r.Context(), "__ws_connect", c))
+	muConn := &wsconn{conn: c}
+	r = r.WithContext(context.WithValue(r.Context(), "__ws_connect", muConn))
 
 	for {
 		mt, message, err := c.ReadMessage()
@@ -104,7 +105,7 @@ func (s Server) ServeWS(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		if err = c.WriteMessage(mt, data); err != nil {
+		if err = muConn.WriteMessage(mt, data); err != nil {
 			s.printf("write response failed with err=%v", err)
 			c.WriteControl(websocket.CloseInternalServerErr, nil, time.Time{})
 			break
@@ -128,3 +129,25 @@ func SMDBoxHandler(w http.ResponseWriter, r *http.Request) {
 </html>
 	`))
 }
+
+type wsconn struct {
+	mu   sync.Mutex
+	conn *websocket.Conn
+}
+
+func (c *wsconn) Conn() *websocket.Conn {
+	return c.conn
+}
+
+func (c *wsconn) WriteMessage(messageType int, data []byte) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.conn.WriteMessage(messageType, data)
+}
+
+func (c *wsconn) WriteJSON(dat interface{}) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.conn.WriteJSON(dat)
+}
+
