@@ -88,7 +88,7 @@ var RPC = struct {
 			Description: ` + "`{{.Description}}`" + `,
 			Methods: map[string]smd.Service{ 
 				{{- range .Methods }}
-					"{{.EndpointName}}": {
+					"{{.SchemaEndpointName}}": {
 						Description: ` + "`{{.Description}}`" + `,
 						Parameters: []smd.JSONSchema{ 
 						{{- range .Args }}
