@@ -9,9 +9,6 @@ import (
 	"github.com/semrush/zenrpc/testdata"
 )
 
-// ArithService description goes here.
-type ArithService struct{ zenrpc.Service }
-
 var rpc = zenrpc.NewServer(zenrpc.Options{BatchMaxLen: 5, AllowCORS: true})
 
 func init() {

@@ -260,13 +260,13 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"a", "b"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
@@ -285,13 +285,13 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"p"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
@@ -305,13 +305,13 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"a", "b"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
@@ -324,13 +324,13 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"isErr"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
@@ -343,13 +343,13 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"isErr"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
@@ -363,13 +363,13 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"a", "b"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
@@ -383,13 +383,13 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"base", "exp"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
@@ -411,13 +411,13 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"array"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
@@ -868,13 +868,13 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"search", "page", "count"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
@@ -899,13 +899,13 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"search"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
@@ -918,13 +918,13 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"id"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
@@ -937,13 +937,13 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"id"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
@@ -956,13 +956,13 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"id"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
@@ -976,13 +976,13 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"p", "replace"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
@@ -1086,13 +1086,13 @@ func (s PrintService) Invoke(ctx context.Context, method string, params json.Raw
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"s"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
@@ -1111,13 +1111,13 @@ func (s PrintService) Invoke(ctx context.Context, method string, params json.Raw
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"s"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
@@ -1136,13 +1136,13 @@ func (s PrintService) Invoke(ctx context.Context, method string, params json.Raw
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"s"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
@@ -1155,13 +1155,13 @@ func (s PrintService) Invoke(ctx context.Context, method string, params json.Raw
 
 		if zenrpc.IsArray(params) {
 			if params, err = zenrpc.ConvertToObject([]string{"s"}, params); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
 		if len(params) > 0 {
 			if err := json.Unmarshal(params, &args); err != nil {
-				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 			}
 		}
 
