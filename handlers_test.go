@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/gorilla/websocket"
+	"github.com/semrush/zenrpc"
+	"github.com/semrush/zenrpc/testdata"
 )
 
 func TestServer_ServeHTTPWithHeaders(t *testing.T) {
@@ -242,33 +244,55 @@ func TestServer_ServeHTTPBatch(t *testing.T) {
 }
 
 func TestServer_ServeHTTPWithErrors(t *testing.T) {
+	rpcHiddenErrorField := zenrpc.NewServer(zenrpc.Options{AllowCORS: true, HideErrorDataField: true})
+	rpcHiddenErrorField.Register("arith", &testdata.ArithService{})
+
 	ts := httptest.NewServer(http.HandlerFunc(rpc.ServeHTTP))
 	defer ts.Close()
 
+	tsHid := httptest.NewServer(http.HandlerFunc(rpcHiddenErrorField.ServeHTTP))
+	defer tsHid.Close()
+
 	var tc = []struct {
+		url     string
 		in, out string
 	}{
 		{
+			url: ts.URL,
 			in:  `{"jsonrpc": "2.0", "method": "multiple1", "id": 1 }`,
 			out: `{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Method not found"}}`},
 		{
+			url: ts.URL,
 			in:  `{"jsonrpc": "2.0", "method": "test.multiple1", "id": 1 }`,
 			out: `{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Method not found"}}`},
 		{
+			url: ts.URL,
 			in:  `{"jsonrpc": "2.0", "method": "foobar, "params": "bar", "baz]`,
 			out: `{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"Parse error"}}`},
 		{
+			url: ts.URL,
 			in:  `{"jsonrpc": "2.0", "params": { "a": 1, "b": 0 }, "id": 1 }`,
 			out: `{"jsonrpc":"2.0","id":1,"error":{"code":-32600,"message":"Invalid Request"}}`},
 		{
+			url: ts.URL,
 			in:  `{"jsonrpc": "2.0", "method": 1, "params": "bar"}`,
 			out: `{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"Parse error"}}`,
 			// in spec: {"jsonrpc": "2.0", "error": {"code": -32600, "message": "Invalid Request"}, "id": null}
 		},
+		{
+			url: ts.URL,
+			in:  `{"jsonrpc": "2.0", "method": "arith.pow", "params": { "base": "3" }, "id": 0 }`,
+			out: `{"jsonrpc":"2.0","id":0,"error":{"code":-32602,"message":"Invalid params","data":"json: cannot unmarshal string into Go struct field .base of type float64"}}`,
+		},
+		{
+			url: tsHid.URL,
+			in:  `{"jsonrpc": "2.0", "method": "arith.pow", "params": { "base": "3" }, "id": 0 }`,
+			out: `{"jsonrpc":"2.0","id":0,"error":{"code":-32602,"message":"Invalid params"}}`,
+		},
 	}
 
 	for _, c := range tc {
-		res, err := http.Post(ts.URL, "application/json", bytes.NewBufferString(c.in))
+		res, err := http.Post(c.url, "application/json", bytes.NewBufferString(c.in))
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -70,6 +70,9 @@ type Options struct {
 
 	// Upgrader sets options for gorilla websocket. If nil, default options will be used
 	Upgrader *websocket.Upgrader
+
+	// HideErrorDataField removes data field from response error
+	HideErrorDataField bool
 }
 
 // Server is JSON-RPC 2.0 Server.
@@ -237,6 +240,10 @@ func (s Server) processRequest(ctx context.Context, req Request) Response {
 	resp := f(ctx, method, req.Params)
 	resp.ID = req.ID
 
+	if s.options.HideErrorDataField && resp.Error != nil {
+		resp.Error.Data = nil
+	}
+
 	return resp
 }
 
@@ -372,4 +379,3 @@ func IDFromContext(ctx context.Context) *json.RawMessage {
 
 	return nil
 }
-

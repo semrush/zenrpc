@@ -145,13 +145,13 @@ var RPC = struct {
 						if params, err = zenrpc.ConvertToObject([]string{ 
 							{{- range .Args }}"{{.JsonName}}",{{ end -}} 
 							}, params); err != nil {
-							return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+							return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 						}
 					}
 
 					if len(params) > 0 {
 						if err := json.Unmarshal(params, &args); err != nil {
-							return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, err.Error(), nil)
+							return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
 						}
 					}
 
