@@ -71,7 +71,7 @@ type Options struct {
 	// Upgrader sets options for gorilla websocket. If nil, default options will be used
 	Upgrader *websocket.Upgrader
 
-	// Removes data field from response error
+	// HideErrorDataField removes data field from response error
 	HideErrorDataField bool
 }
 
