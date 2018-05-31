@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"unicode"
-	"unicode/utf8"
 )
 
 const (
@@ -39,6 +37,9 @@ type PackageInfo struct {
 
 	StructsNamespacesFromArgs map[string]struct{} // set of structs names from arguments for printing imports
 	ImportsForGeneration      []*ast.ImportSpec
+
+	caser    func(string) string
+	argCaser func(string) string
 }
 
 type Service struct {
@@ -49,15 +50,16 @@ type Service struct {
 }
 
 type Method struct {
-	FuncDecl      *ast.FuncType
-	Name          string
-	LowerCaseName string
-	HasContext    bool
-	Args          []Arg
-	DefaultValues map[string]DefaultValue
-	Returns       []Return
-	SMDReturn     *SMDReturn // return for generate smd schema; pointer for nil check
-	Description   string
+	FuncDecl           *ast.FuncType
+	Name               string
+	EndpointName       string
+	SchemaEndpointName string
+	HasContext         bool
+	Args               []Arg
+	DefaultValues      map[string]DefaultValue
+	Returns            []Return
+	SMDReturn          *SMDReturn // return for generate smd schema; pointer for nil check
+	Description        string
 
 	Errors []SMDError // errors for documentation in SMD
 }
@@ -74,11 +76,15 @@ type Arg struct {
 	Name            string
 	Type            string
 	CapitalName     string
-	JsonName        string
+	CaseName        string
 	HasStar         bool
 	HasDefaultValue bool
 	Description     string // from magic comment
 	SMDType         SMDType
+}
+
+func (a Arg) String() string {
+	return strings.Join([]string{a.Name, a.Type}, " ")
 }
 
 type Return struct {
@@ -119,7 +125,13 @@ type SMDError struct {
 	Description string
 }
 
-func NewPackageInfo() *PackageInfo {
+func NewPackageInfo(useSnakeCase bool) *PackageInfo {
+	caser := toLowerCase
+	argCaser := toNoCase
+	if useSnakeCase {
+		caser = toSnakeCase
+		argCaser = toSnakeCase
+	}
 	return &PackageInfo{
 		Services: []*Service{},
 
@@ -129,6 +141,9 @@ func NewPackageInfo() *PackageInfo {
 
 		StructsNamespacesFromArgs: make(map[string]struct{}),
 		ImportsForGeneration:      []*ast.ImportSpec{},
+
+		caser:    caser,
+		argCaser: argCaser,
 	}
 }
 
@@ -163,7 +178,7 @@ func (pi *PackageInfo) Parse(filename string) error {
 }
 
 func (pi *PackageInfo) parseFiles(files []os.FileInfo) error {
-	astFiles := []*ast.File{}
+	var astFiles []*ast.File
 	// first loop: parse files and structs
 	for _, f := range files {
 		if f.IsDir() {
@@ -231,7 +246,7 @@ func (pi *PackageInfo) parseServices(f *ast.File) {
 			}
 
 			// check that struct is our zenrpc struct
-			if hasZenrpcComment(spec) || hasZenrpcService(structType) {
+			if hasZenrpcComment(spec, zenrpcComment) || hasZenrpcService(structType) {
 				pi.Services = append(pi.Services, &Service{
 					GenDecl:     gdecl,
 					Name:        spec.Name.Name,
@@ -251,14 +266,15 @@ func (pi *PackageInfo) parseMethods(f *ast.File) error {
 		}
 
 		m := Method{
-			FuncDecl:      fdecl.Type,
-			Name:          fdecl.Name.Name,
-			LowerCaseName: strings.ToLower(fdecl.Name.Name),
-			Args:          []Arg{},
-			DefaultValues: make(map[string]DefaultValue),
-			Returns:       []Return{},
-			Description:   parseCommentGroup(fdecl.Doc),
-			Errors:        []SMDError{},
+			FuncDecl:           fdecl.Type,
+			Name:               fdecl.Name.Name,
+			EndpointName:       pi.caser(fdecl.Name.Name),
+			SchemaEndpointName: pi.argCaser(fdecl.Name.Name),
+			Args:               []Arg{},
+			DefaultValues:      make(map[string]DefaultValue),
+			Returns:            []Return{},
+			Description:        parseCommentGroup(fdecl.Doc),
+			Errors:             []SMDError{},
 		}
 
 		serviceNames := m.linkWithServices(pi, fdecl)
@@ -288,48 +304,41 @@ func (pi PackageInfo) String() string {
 	for _, s := range pi.Services {
 		result += fmt.Sprintf("- %s\n", s.Name)
 		for _, m := range s.Methods {
-			result += fmt.Sprintf("  • %s", m.Name)
-
-			// args
-			result += "("
-			for i, a := range m.Args {
-				if i != 0 {
-					result += ", "
-				}
-
-				result += fmt.Sprintf("%s %s", a.Name, a.Type)
-			}
-			result += ") "
-
-			// no return args
-			if len(m.Returns) == 0 {
-				result += "\n"
-				continue
-			}
-
-			// only one return arg without name
-			if len(m.Returns) == 1 && len(m.Returns[0].Name) == 0 {
-				result += m.Returns[0].Type + "\n"
-				continue
-			}
-
-			// return
-			result += "("
-			for i, a := range m.Returns {
-				if i != 0 {
-					result += fmt.Sprintf(", ")
-				}
-
-				if len(a.Name) == 0 {
-					result += a.Type
-				} else {
-					result += fmt.Sprintf("%s %s", a.Name, a.Type)
-				}
-			}
-			result += ")\n"
+			result += fmt.Sprintf("  • %s\n", m)
 		}
 	}
 
+	return result
+}
+
+func (m Method) String() string {
+	var argsStr []string
+	for _, a := range m.Args {
+		argsStr = append(argsStr, a.String())
+	}
+	result := m.Name + "(" + strings.Join(argsStr, ", ") + ")"
+
+	// no return args
+	if len(m.Returns) == 0 {
+		return result
+	}
+	result += " "
+	// only one return arg without name
+	if len(m.Returns) == 1 && len(m.Returns[0].Name) == 0 {
+		result += m.Returns[0].Type
+		return result
+	}
+
+	// return
+	var returnStr []string
+	for _, a := range m.Returns {
+		if len(a.Name) == 0 {
+			returnStr = append(returnStr, a.Type)
+		} else {
+			returnStr = append(returnStr, fmt.Sprintf("%s %s", a.Name, a.Type))
+		}
+	}
+	result += "(" + strings.Join(returnStr, ", ") + ")"
 	return result
 }
 
@@ -361,7 +370,7 @@ func (m *Method) linkWithServices(pi *PackageInfo, fdecl *ast.FuncDecl) (names [
 		}
 
 		// find service in our service list
-		// method can be in several services
+		// method can be in several services //fixme: Any example? Because https://golang.org/ref/spec#Method_declarations tells opposite
 		for _, s := range pi.Services {
 			if s.Name == ident.Name {
 				names = append(names, s.Name)
@@ -388,17 +397,17 @@ func (m *Method) parseArguments(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNam
 		typeName := parseType(field.Type)
 		if typeName == "" {
 			// get argument names
-			fields := []string{}
+			var fields []string
 			for _, name := range field.Names {
 				fields = append(fields, name.Name)
 			}
 
 			// get Service.Method list
-			methods := []string{}
+			var methods []string
 			for _, s := range serviceNames {
 				methods = append(methods, s+"."+m.Name)
 			}
-			return fmt.Errorf("Can't parse type of argument %s in %s", strings.Join(fields, ", "), strings.Join(methods, ", "))
+			return fmt.Errorf("can't parse type of argument %s in %s", strings.Join(fields, ", "), strings.Join(methods, ", "))
 		}
 
 		if typeName == contextTypeName {
@@ -433,7 +442,7 @@ func (m *Method) parseArguments(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNam
 				Name:        name.Name,
 				Type:        typeName,
 				CapitalName: strings.Title(name.Name),
-				JsonName:    lowerFirst(name.Name),
+				CaseName:    pi.argCaser(name.Name),
 				HasStar:     hasStar,
 				SMDType: SMDType{
 					Type:      smdType,
@@ -453,8 +462,8 @@ func (m *Method) parseReturns(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNames
 	}
 
 	// get Service.Method list
-	methods := func() string {
-		methods := []string{}
+	methodsFn := func() string {
+		var methods []string
 		for _, s := range serviceNames {
 			methods = append(methods, s+"."+m.Name)
 		}
@@ -464,13 +473,13 @@ func (m *Method) parseReturns(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNames
 	hasError := false
 	for _, field := range fdecl.Type.Results.List {
 		if len(field.Names) > 1 {
-			return fmt.Errorf("%s contain more than one return arguments with same type", methods())
+			return fmt.Errorf("%s contain more than one return arguments with same type", methodsFn())
 		}
 
 		// parse type
 		typeName := parseType(field.Type)
 		if typeName == "" {
-			return fmt.Errorf("Can't parse type of return value in %s on position %d", methods(), len(m.Returns)+1)
+			return fmt.Errorf("can't parse type of return value in %s on position %d", methodsFn(), len(m.Returns)+1)
 		}
 
 		var fieldName string
@@ -486,14 +495,14 @@ func (m *Method) parseReturns(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNames
 
 		if typeName == "error" || typeName == errorTypeName || typeName == "*"+errorTypeName {
 			if hasError {
-				return fmt.Errorf("%s contain more than one error return arguments", methods())
+				return fmt.Errorf("%s contain more than one error return arguments", methodsFn())
 			}
 			hasError = true
 			continue
 		}
 
 		if m.SMDReturn != nil {
-			return fmt.Errorf("%s contain more than one valuable return argument", methods())
+			return fmt.Errorf("%s contain more than one valuable return argument", methodsFn())
 		}
 
 		hasStar := hasStar(typeName) // check for pointer
@@ -532,61 +541,63 @@ func (m *Method) parseComments(doc *ast.CommentGroup, pi *PackageInfo) {
 	}
 
 	for _, comment := range doc.List {
-		if !strings.HasPrefix(comment.Text, zenrpcMagicPrefix) {
-			continue
+		if strings.HasPrefix(comment.Text, zenrpcMagicPrefix) {
+			m.parseMagicOption(comment, pi)
 		}
+	}
+}
 
-		// split by magic path and description
-		fields := strings.Fields(comment.Text)
-		couple := [...]string{
-			strings.TrimPrefix(strings.TrimSpace(fields[0]), zenrpcMagicPrefix),
-			strings.Join(fields[1:], " "),
-		}
+func (m *Method) parseMagicOption(comment *ast.Comment, pi *PackageInfo) {
+	// split by magic path and description
+	fields := strings.Fields(comment.Text)
+	couple := [...]string{
+		strings.TrimPrefix(strings.TrimSpace(fields[0]), zenrpcMagicPrefix),
+		strings.Join(fields[1:], " "),
+	}
 
-		// parse arguments
-		if args := strings.Split(couple[0], "="); len(args) == 2 {
-			// default value
-			// example: "//zenrpc:exp=2 	exponent could be empty"
+	// parse arguments
+	if args := strings.Split(couple[0], "="); len(args) == 2 {
+		// default value
+		// example: "//zenrpc:exp=2 	exponent could be empty"
 
-			name := args[0]
-			value := args[1]
-			for i, a := range m.Args {
-				if a.Name == name {
-					m.DefaultValues[name] = DefaultValue{
-						Name:        name,
-						CapitalName: a.CapitalName,
-						Type:        strings.TrimPrefix(a.Type, "*"), // remove star
-						Comment:     comment.Text,
-						Value:       value,
-					}
-
-					m.Args[i].HasDefaultValue = true
-					if len(couple) == 2 {
-						m.Args[i].Description = couple[1]
-					}
-
-					break
+		name := args[0]
+		value := args[1]
+		for i, a := range m.Args {
+			if a.Name == name {
+				m.DefaultValues[name] = DefaultValue{
+					Name:        name,
+					CapitalName: a.CapitalName,
+					Type:        strings.TrimPrefix(a.Type, "*"), // remove star
+					Comment:     comment.Text,
+					Value:       value,
 				}
-			}
-		} else if couple[0] == "return" {
-			// description for return
-			// example: "//zenrpc:return operation result"
 
-			m.SMDReturn.Description = couple[1]
-		} else if i, err := strconv.Atoi(couple[0]); err == nil {
-			// error code
-			// example: "//zenrpc:-32603		divide by zero"
-
-			m.Errors = append(m.Errors, SMDError{i, couple[1]})
-		} else {
-			// description for argument without default value
-			// example: "//zenrpc:id person id"
-
-			for i, a := range m.Args {
-				if a.Name == couple[0] {
+				m.Args[i].HasDefaultValue = true
+				if len(couple) == 2 {
 					m.Args[i].Description = couple[1]
-					break
 				}
+
+				break
+			}
+		}
+	} else if couple[0] == "return" {
+		// description for return
+		// example: "//zenrpc:return operation result"
+
+		m.SMDReturn.Description = couple[1]
+	} else if i, err := strconv.Atoi(couple[0]); err == nil {
+		// error code
+		// example: "//zenrpc:-32603		divide by zero"
+
+		m.Errors = append(m.Errors, SMDError{i, couple[1]})
+	} else {
+		// description for argument without default value
+		// example: "//zenrpc:id person id"
+
+		for i, a := range m.Args {
+			if a.Name == couple[0] {
+				m.Args[i].Description = couple[1]
+				break
 			}
 		}
 	}
@@ -599,7 +610,7 @@ func parseCommentGroup(doc *ast.CommentGroup) string {
 
 	result := ""
 	for _, comment := range doc.List {
-		if strings.HasPrefix(comment.Text, zenrpcMagicPrefix) {
+		if strings.HasPrefix(comment.Text, zenrpcComment) {
 			continue
 		}
 
@@ -711,11 +722,19 @@ func parseStruct(expr ast.Expr) *Struct {
 	}
 }
 
-func hasZenrpcComment(spec *ast.TypeSpec) bool {
-	if spec.Comment != nil && len(spec.Comment.List) > 0 && spec.Comment.List[0].Text == zenrpcComment {
-		return true
-	}
+func hasZenrpcComment(spec *ast.TypeSpec, comment string) bool {
+	return hasComment(spec.Comment, comment) || hasComment(spec.Doc, comment)
+}
 
+func hasComment(group *ast.CommentGroup, text string) bool {
+	if group == nil {
+		return false
+	}
+	for _, line := range group.List {
+		if line.Text == text {
+			return true
+		}
+	}
 	return false
 }
 
@@ -737,14 +756,6 @@ func hasZenrpcService(structType *ast.StructType) bool {
 	}
 
 	return false
-}
-
-func lowerFirst(s string) string {
-	if s == "" {
-		return ""
-	}
-	r, n := utf8.DecodeRuneInString(s)
-	return string(unicode.ToLower(r)) + s[n:]
 }
 
 func hasStar(s string) bool {

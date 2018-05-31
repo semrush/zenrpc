@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/semrush/zenrpc"
 	"sync"
+
+	"github.com/semrush/zenrpc"
 )
 
 // SerialPeopleAccess is middleware for seiral access to PhoneBook methods
@@ -84,10 +85,13 @@ type Address struct {
 	City   string
 }
 
-type PhoneBook struct {
-	DB map[uint64]*Person
-	id uint64
-} //zenrpc
+type (
+	//zenrpc
+	PhoneBook struct {
+		DB map[uint64]*Person
+		id uint64
+	}
+)
 
 // Get returns all people from DB.
 //zenrpc:page=0 current page

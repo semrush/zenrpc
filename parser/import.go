@@ -67,17 +67,18 @@ func importNamePath(i *ast.ImportSpec) (name, path string) {
 	return
 }
 
+var globalSet = make(map[string]struct{})
+
 func uniqueImports(in []*ast.ImportSpec) (out []*ast.ImportSpec) {
-	set := make(map[string]struct{})
 	for _, i := range in {
 		key := i.Path.Value
 		if i.Name != nil {
 			key += "|" + i.Name.Name
 		}
 
-		if _, ok := set[key]; !ok {
+		if _, ok := globalSet[key]; !ok {
 			out = append(out, i)
-			set[key] = struct{}{}
+			globalSet[key] = struct{}{}
 		}
 	}
 

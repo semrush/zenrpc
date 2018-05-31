@@ -2,41 +2,50 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
-	"github.com/semrush/zenrpc/parser"
 	"go/format"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/semrush/zenrpc/parser"
 )
 
 const (
-	version = "1.0.1"
+	version = "1.1.0"
 
 	openIssueURL = "https://github.com/semrush/zenrpc/issues/new"
 	githubURL    = "https://github.com/semrush/zenrpc"
 )
 
+var (
+	useStringCase = flag.Bool("snake-case", false, "Generate names as snake_case instead of lower case.")
+	verbose       = flag.Bool("v", true, "When false, allows you to omit service listing.")
+	filename      = flag.String("file", "", "Is used for passing file name clearly and directly.")
+)
+
+func init() {
+	flag.Parse()
+	flag.CommandLine.SetOutput(os.Stdout)
+	if *filename == "" {
+		*filename = os.Getenv("GOFILE")
+	}
+}
+
 func main() {
 	start := time.Now()
 	fmt.Printf("Generator version: %s\n", version)
 
-	var filename string
-	if len(os.Args) > 1 {
-		filename = os.Args[len(os.Args)-1]
-	} else {
-		filename = os.Getenv("GOFILE")
-	}
-
-	if len(filename) == 0 {
+	if *filename == "" {
 		fmt.Fprintln(os.Stderr, "File path is empty")
 		os.Exit(1)
 	}
 
-	fmt.Printf("Entrypoint: %s\n", filename)
+	fmt.Printf("Entrypoint: %s\n", *filename)
 
-	pi := parser.NewPackageInfo()
-	if err := pi.Parse(filename); err != nil {
+	pi := parser.NewPackageInfo(*useStringCase)
+	if err := pi.Parse(*filename); err != nil {
 		printError(err)
 		os.Exit(1)
 	}
@@ -54,9 +63,11 @@ func main() {
 
 	fmt.Printf("Generated: %s\n", outputFileName)
 	fmt.Printf("Duration: %dms\n", int64(time.Since(start)/time.Millisecond))
-	fmt.Println()
-	fmt.Print(pi)
-	fmt.Println()
+	if *verbose {
+		fmt.Println()
+		fmt.Print(pi)
+		fmt.Println()
+	}
 }
 
 func printError(err error) {
@@ -68,15 +79,12 @@ func printError(err error) {
 	fmt.Printf("\t%s\n", openIssueURL)
 	fmt.Println("For more information, see:")
 	fmt.Printf("\t%s\n\n", githubURL)
+	fmt.Printf("Usage of %s:\n", os.Args[0])
+	flag.PrintDefaults()
 }
 
 func generateFile(pi *parser.PackageInfo) (string, error) {
 	outputFileName := filepath.Join(pi.Dir, pi.PackageName+parser.GenerateFileSuffix)
-	file, err := os.Create(outputFileName)
-	if err != nil {
-		return outputFileName, err
-	}
-	defer file.Close()
 
 	output := new(bytes.Buffer)
 	if err := serviceTemplate.Execute(output, pi); err != nil {
@@ -87,6 +95,12 @@ func generateFile(pi *parser.PackageInfo) (string, error) {
 	if err != nil {
 		return outputFileName, err
 	}
+
+	file, err := os.Create(outputFileName)
+	if err != nil {
+		return outputFileName, err
+	}
+	defer file.Close()
 
 	if _, err = file.Write(source); err != nil {
 		return outputFileName, err
