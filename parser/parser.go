@@ -493,7 +493,7 @@ func (m *Method) parseReturns(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNames
 		}
 
 		if m.SMDReturn != nil {
-			return fmt.Errorf("%s contain more than one valuable return argument", methods())
+			return fmt.Errorf("%s contain more than one variable return argument", methods())
 		}
 
 		hasStar := hasStar(typeName) // check for pointer
