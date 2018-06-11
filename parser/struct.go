@@ -126,7 +126,7 @@ func (s *Struct) parse(pi *PackageInfo) error {
 
 			p := Property{
 				Name:        name.Name,
-				Description: description,
+				Description: escape(description),
 				SMDType: SMDType{
 					Type:      smdType,
 					ItemsType: itemType,

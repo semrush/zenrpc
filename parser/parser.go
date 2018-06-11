@@ -236,7 +236,7 @@ func (pi *PackageInfo) parseServices(f *ast.File) {
 					GenDecl:     gdecl,
 					Name:        spec.Name.Name,
 					Methods:     []*Method{},
-					Description: parseCommentGroup(spec.Doc),
+					Description: escape(parseCommentGroup(spec.Doc)),
 				})
 			}
 		}
@@ -257,7 +257,7 @@ func (pi *PackageInfo) parseMethods(f *ast.File) error {
 			Args:          []Arg{},
 			DefaultValues: make(map[string]DefaultValue),
 			Returns:       []Return{},
-			Description:   parseCommentGroup(fdecl.Doc),
+			Description:   escape(parseCommentGroup(fdecl.Doc)),
 			Errors:        []SMDError{},
 		}
 
@@ -562,7 +562,7 @@ func (m *Method) parseComments(doc *ast.CommentGroup, pi *PackageInfo) {
 
 					m.Args[i].HasDefaultValue = true
 					if len(couple) == 2 {
-						m.Args[i].Description = couple[1]
+						m.Args[i].Description = escape(couple[1])
 					}
 
 					break
@@ -572,7 +572,7 @@ func (m *Method) parseComments(doc *ast.CommentGroup, pi *PackageInfo) {
 			// description for return
 			// example: "//zenrpc:return operation result"
 
-			m.SMDReturn.Description = couple[1]
+			m.SMDReturn.Description = escape(couple[1])
 		} else if i, err := strconv.Atoi(couple[0]); err == nil {
 			// error code
 			// example: "//zenrpc:-32603		divide by zero"
@@ -584,7 +584,7 @@ func (m *Method) parseComments(doc *ast.CommentGroup, pi *PackageInfo) {
 
 			for i, a := range m.Args {
 				if a.Name == couple[0] {
-					m.Args[i].Description = couple[1]
+					m.Args[i].Description = escape(couple[1])
 					break
 				}
 			}
@@ -753,4 +753,8 @@ func hasStar(s string) bool {
 	}
 
 	return false
+}
+
+func escape(s string) string {
+	return strings.Replace(s, "`", `"`, -1)
 }
