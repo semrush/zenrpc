@@ -88,8 +88,11 @@ func (s *Struct) parse(pi *PackageInfo) error {
 				pi.Structs[internalS.Name] = internalS
 			}
 
-			if err := internalS.parse(pi); err != nil {
-				return err
+			// avoid self-linked infinite recursion
+			if internalS.Name != s.Name {
+				if err := internalS.parse(pi); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -194,7 +197,11 @@ func definitions(smdType SMDType, structs map[string]*Struct) []string {
 		for _, p := range s.Properties {
 			if p.SMDType.Ref != "" {
 				result = append(result, p.SMDType.Ref)
-				result = append(result, definitions(p.SMDType, structs)...)
+
+				// avoid self-linked infinite recursion
+				if smdType.Ref != p.SMDType.Ref {
+					result = append(result, definitions(p.SMDType, structs)...)
+				}
 			}
 		}
 	}

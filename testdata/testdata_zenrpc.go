@@ -468,6 +468,48 @@ func (CatalogueService) SMD() smd.ServiceInfo {
 										Description: ``,
 										Type:        smd.String,
 									},
+									"nodes": {
+										Description: ``,
+										Type:        smd.Array,
+										Items: map[string]string{
+											"$ref": "#/definitions/Group",
+										},
+									},
+									"group": {
+										Description: ``,
+										Type:        smd.Array,
+										Items: map[string]string{
+											"$ref": "#/definitions/Group",
+										},
+									},
+									"child": {
+										Description: ``,
+										Ref:         "#/definitions/Group",
+										Type:        smd.Object,
+									},
+									"child": {
+										Description: ``,
+										Ref:         "#/definitions/Group",
+										Type:        smd.Object,
+									},
+									"sub": {
+										Description: ``,
+										Ref:         "#/definitions/SubGroup",
+										Type:        smd.Object,
+									},
+								},
+							},
+							"SubGroup": {
+								Type: "object",
+								Properties: map[string]smd.Property{
+									"id": {
+										Description: ``,
+										Type:        smd.Integer,
+									},
+									"title": {
+										Description: ``,
+										Type:        smd.String,
+									},
 								},
 							},
 						},
@@ -508,6 +550,48 @@ func (CatalogueService) SMD() smd.ServiceInfo {
 								},
 							},
 							"Group": {
+								Type: "object",
+								Properties: map[string]smd.Property{
+									"id": {
+										Description: ``,
+										Type:        smd.Integer,
+									},
+									"title": {
+										Description: ``,
+										Type:        smd.String,
+									},
+									"nodes": {
+										Description: ``,
+										Type:        smd.Array,
+										Items: map[string]string{
+											"$ref": "#/definitions/Group",
+										},
+									},
+									"group": {
+										Description: ``,
+										Type:        smd.Array,
+										Items: map[string]string{
+											"$ref": "#/definitions/Group",
+										},
+									},
+									"child": {
+										Description: ``,
+										Ref:         "#/definitions/Group",
+										Type:        smd.Object,
+									},
+									"child": {
+										Description: ``,
+										Ref:         "#/definitions/Group",
+										Type:        smd.Object,
+									},
+									"sub": {
+										Description: ``,
+										Ref:         "#/definitions/SubGroup",
+										Type:        smd.Object,
+									},
+								},
+							},
+							"SubGroup": {
 								Type: "object",
 								Properties: map[string]smd.Property{
 									"id": {

@@ -5,8 +5,19 @@ import (
 )
 
 type Group struct {
+	Id       int      `json:"id"`
+	Title    string   `json:"title"`
+	Nodes    []Group  `json:"nodes"`
+	Groups   []Group  `json:"group"`
+	Child    Group    `json:"child"`
+	ChildOpt *Group   `json:"child"`
+	Sub      SubGroup `json:"sub"`
+}
+
+type SubGroup struct {
 	Id    int    `json:"id"`
 	Title string `json:"title"`
+	//Nodes []Group `json:"nodes"` TODO still causes infinite recursion
 }
 
 type Campaign struct {
