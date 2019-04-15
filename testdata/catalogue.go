@@ -9,7 +9,6 @@ type Group struct {
 	Title    string   `json:"title"`
 	Nodes    []Group  `json:"nodes"`
 	Groups   []Group  `json:"group"`
-	Child    Group    `json:"child"`
 	ChildOpt *Group   `json:"child"`
 	Sub      SubGroup `json:"sub"`
 }

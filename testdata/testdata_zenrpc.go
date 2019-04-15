@@ -487,11 +487,6 @@ func (CatalogueService) SMD() smd.ServiceInfo {
 										Ref:         "#/definitions/Group",
 										Type:        smd.Object,
 									},
-									"child": {
-										Description: ``,
-										Ref:         "#/definitions/Group",
-										Type:        smd.Object,
-									},
 									"sub": {
 										Description: ``,
 										Ref:         "#/definitions/SubGroup",
@@ -573,11 +568,6 @@ func (CatalogueService) SMD() smd.ServiceInfo {
 										Items: map[string]string{
 											"$ref": "#/definitions/Group",
 										},
-									},
-									"child": {
-										Description: ``,
-										Ref:         "#/definitions/Group",
-										Type:        smd.Object,
 									},
 									"child": {
 										Description: ``,
