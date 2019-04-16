@@ -13,9 +13,10 @@ import (
 )
 
 var RPC = struct {
-	ArithService struct{ Sum, Positive, DoSomething, DoSomethingWithPoint, Multiply, CheckError, CheckZenRPCError, Divide, Pow, Pi, SumArray string }
-	PhoneBook    struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }
-	PrintService struct{ PrintRequiredDefault, PrintOptionalWithDefault, PrintRequired, PrintOptional string }
+	ArithService     struct{ Sum, Positive, DoSomething, DoSomethingWithPoint, Multiply, CheckError, CheckZenRPCError, Divide, Pow, Pi, SumArray string }
+	CatalogueService struct{ First, Second string }
+	PhoneBook        struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }
+	PrintService     struct{ PrintRequiredDefault, PrintOptionalWithDefault, PrintRequired, PrintOptional string }
 }{
 	ArithService: struct{ Sum, Positive, DoSomething, DoSomethingWithPoint, Multiply, CheckError, CheckZenRPCError, Divide, Pow, Pi, SumArray string }{
 		Sum:                  "sum",
@@ -29,6 +30,10 @@ var RPC = struct {
 		Pow:                  "pow",
 		Pi:                   "pi",
 		SumArray:             "sumarray",
+	},
+	CatalogueService: struct{ First, Second string }{
+		First:  "first",
+		Second: "second",
 	},
 	PhoneBook: struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }{
 		Get:            "get",
@@ -428,6 +433,223 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 		}
 
 		resp.Set(s.SumArray(args.Array))
+
+	default:
+		resp = zenrpc.NewResponseError(nil, zenrpc.MethodNotFound, "", nil)
+	}
+
+	return resp
+}
+
+func (CatalogueService) SMD() smd.ServiceInfo {
+	return smd.ServiceInfo{
+		Description: ``,
+		Methods: map[string]smd.Service{
+			"First": {
+				Description: ``,
+				Parameters: []smd.JSONSchema{
+					{
+						Name:        "groups",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Array,
+						Items: map[string]string{
+							"$ref": "#/definitions/Group",
+						},
+						Definitions: map[string]smd.Definition{
+							"Group": {
+								Type: "object",
+								Properties: map[string]smd.Property{
+									"id": {
+										Description: ``,
+										Type:        smd.Integer,
+									},
+									"title": {
+										Description: ``,
+										Type:        smd.String,
+									},
+									"nodes": {
+										Description: ``,
+										Type:        smd.Array,
+										Items: map[string]string{
+											"$ref": "#/definitions/Group",
+										},
+									},
+									"group": {
+										Description: ``,
+										Type:        smd.Array,
+										Items: map[string]string{
+											"$ref": "#/definitions/Group",
+										},
+									},
+									"child": {
+										Description: ``,
+										Ref:         "#/definitions/Group",
+										Type:        smd.Object,
+									},
+									"sub": {
+										Description: ``,
+										Ref:         "#/definitions/SubGroup",
+										Type:        smd.Object,
+									},
+								},
+							},
+							"SubGroup": {
+								Type: "object",
+								Properties: map[string]smd.Property{
+									"id": {
+										Description: ``,
+										Type:        smd.Integer,
+									},
+									"title": {
+										Description: ``,
+										Type:        smd.String,
+									},
+								},
+							},
+						},
+					},
+				},
+				Returns: smd.JSONSchema{
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Boolean,
+				},
+			},
+			"Second": {
+				Description: ``,
+				Parameters: []smd.JSONSchema{
+					{
+						Name:        "campaigns",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Array,
+						Items: map[string]string{
+							"$ref": "#/definitions/Campaign",
+						},
+						Definitions: map[string]smd.Definition{
+							"Campaign": {
+								Type: "object",
+								Properties: map[string]smd.Property{
+									"id": {
+										Description: ``,
+										Type:        smd.Integer,
+									},
+									"group": {
+										Description: ``,
+										Type:        smd.Array,
+										Items: map[string]string{
+											"$ref": "#/definitions/Group",
+										},
+									},
+								},
+							},
+							"Group": {
+								Type: "object",
+								Properties: map[string]smd.Property{
+									"id": {
+										Description: ``,
+										Type:        smd.Integer,
+									},
+									"title": {
+										Description: ``,
+										Type:        smd.String,
+									},
+									"nodes": {
+										Description: ``,
+										Type:        smd.Array,
+										Items: map[string]string{
+											"$ref": "#/definitions/Group",
+										},
+									},
+									"group": {
+										Description: ``,
+										Type:        smd.Array,
+										Items: map[string]string{
+											"$ref": "#/definitions/Group",
+										},
+									},
+									"child": {
+										Description: ``,
+										Ref:         "#/definitions/Group",
+										Type:        smd.Object,
+									},
+									"sub": {
+										Description: ``,
+										Ref:         "#/definitions/SubGroup",
+										Type:        smd.Object,
+									},
+								},
+							},
+							"SubGroup": {
+								Type: "object",
+								Properties: map[string]smd.Property{
+									"id": {
+										Description: ``,
+										Type:        smd.Integer,
+									},
+									"title": {
+										Description: ``,
+										Type:        smd.String,
+									},
+								},
+							},
+						},
+					},
+				},
+				Returns: smd.JSONSchema{
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Boolean,
+				},
+			},
+		},
+	}
+}
+
+// Invoke is as generated code from zenrpc cmd
+func (s CatalogueService) Invoke(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
+	resp := zenrpc.Response{}
+	var err error
+
+	switch method {
+	case RPC.CatalogueService.First:
+		var args = struct {
+			Groups []Group `json:"groups"`
+		}{}
+
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"groups"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
+			}
+		}
+
+		resp.Set(s.First(args.Groups))
+
+	case RPC.CatalogueService.Second:
+		var args = struct {
+			Campaigns []Campaign `json:"campaigns"`
+		}{}
+
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"campaigns"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
+			}
+		}
+
+		resp.Set(s.Second(args.Campaigns))
 
 	default:
 		resp = zenrpc.NewResponseError(nil, zenrpc.MethodNotFound, "", nil)
