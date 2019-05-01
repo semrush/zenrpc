@@ -99,14 +99,14 @@ func (s *Struct) parse(pi *PackageInfo, testMap map[string]bool) error {
 			}
 			//time.Sleep(time.Second)
 			if !ignore {
-				fmt.Fprintln(os.Stderr, "parse struct:", s.Name,internalS.Name)
+				fmt.Fprintln(os.Stderr, "parse struct:", s.Name, internalS.Name)
 				if internalS.Name != s.Name {
-					if err := internalS.parse(pi,testMap); err != nil {
+					if err := internalS.parse(pi, testMap); err != nil {
 						return err
 					}
 				}
 			} else {
-				fmt.Fprintln(os.Stderr, "ignore struct:", s.Name,internalS.Name)
+				fmt.Fprintln(os.Stderr, "ignore struct:", s.Name, internalS.Name)
 			}
 		}
 
@@ -184,7 +184,7 @@ func Definitions(smdType SMDType, structs map[string]*Struct) []*Struct {
 		return nil
 	}
 
-	names := definitions(smdType, structs, 0, make(map[string]bool))
+	names := definitions(smdType, structs, make(map[string]bool))
 	if smdType.Type == "Array" {
 		// add object to definitions if type array
 		names = append([]string{smdType.Ref}, names...)
@@ -205,10 +205,7 @@ func Definitions(smdType SMDType, structs map[string]*Struct) []*Struct {
 }
 
 // definitions returns list of struct names used inside smdType
-func definitions(smdType SMDType, structs map[string]*Struct, level int, sTestMap map[string]bool) []string {
-	//if testMap2 == nil {
-	//	testMap2 = make(map[string]bool)
-	//}
+func definitions(smdType SMDType, structs map[string]*Struct, sTestMap map[string]bool) []string {
 	sTestMap[smdType.Ref] = true
 	result := []string{}
 	if s, ok := structs[smdType.Ref]; ok {
@@ -216,15 +213,13 @@ func definitions(smdType SMDType, structs map[string]*Struct, level int, sTestMa
 			if p.SMDType.Ref != "" {
 				result = append(result, p.SMDType.Ref)
 				ignore := false
-				//if level > 10 {
-					if existed, ok := sTestMap[smdType.Ref]; existed && ok {
-						ignore = true
-					}
-				//}
+				if existed, ok := sTestMap[smdType.Ref]; existed && ok {
+					ignore = true
+				}
 				if !ignore {
 					// avoid self-linked infinite recursion
 					if smdType.Ref != p.SMDType.Ref {
-						result = append(result, definitions(p.SMDType, structs, level+1, sTestMap)...)
+						result = append(result, definitions(p.SMDType, structs, sTestMap)...)
 					}
 				}
 			}
