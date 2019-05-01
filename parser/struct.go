@@ -1,9 +1,7 @@
 package parser
 
 import (
-	"fmt"
 	"go/ast"
-	"os"
 	"reflect"
 	"strings"
 )
@@ -99,14 +97,11 @@ func (s *Struct) parse(pi *PackageInfo, testMap map[string]bool) error {
 			}
 			//time.Sleep(time.Second)
 			if !ignore {
-				fmt.Fprintln(os.Stderr, "parse struct:", s.Name, internalS.Name)
 				if internalS.Name != s.Name {
 					if err := internalS.parse(pi, testMap); err != nil {
 						return err
 					}
 				}
-			} else {
-				fmt.Fprintln(os.Stderr, "ignore struct:", s.Name, internalS.Name)
 			}
 		}
 
