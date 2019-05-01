@@ -1,14 +1,17 @@
 package parser
 
 import (
+	"fmt"
 	"go/ast"
+	"os"
 	"reflect"
 	"strings"
 )
 
 func (pi *PackageInfo) parseStructs() {
+	testMap := make(map[string]bool)
 	for _, s := range pi.Structs {
-		s.parse(pi)
+		s.parse(pi, testMap)
 	}
 }
 
@@ -31,12 +34,14 @@ func (s *Struct) findTypeSpec(pi *PackageInfo) bool {
 	return false
 }
 
-func (s *Struct) parse(pi *PackageInfo) error {
+func (s *Struct) parse(pi *PackageInfo, testMap map[string]bool) error {
 	if !s.findTypeSpec(pi) || s.Properties != nil {
 		// can't find struct implementation
 		// or struct already parsed
 		return nil
 	}
+
+	testMap[s.Name] = true
 
 	s.Properties = []Property{}
 	for _, field := range s.StructType.Fields.List {
@@ -60,7 +65,7 @@ func (s *Struct) parse(pi *PackageInfo) error {
 					pi.Structs[embeddedS.Name] = embeddedS
 				}
 
-				if err := embeddedS.parse(pi); err != nil {
+				if err := embeddedS.parse(pi, testMap); err != nil {
 					return err
 				}
 
@@ -88,11 +93,20 @@ func (s *Struct) parse(pi *PackageInfo) error {
 				pi.Structs[internalS.Name] = internalS
 			}
 
-			// avoid self-linked infinite recursion
-			if internalS.Name != s.Name {
-				if err := internalS.parse(pi); err != nil {
-					return err
+			ignore := false
+			if existed, ok := testMap[internalS.Name]; ok && existed {
+				ignore = true
+			}
+			//time.Sleep(time.Second)
+			if !ignore {
+				fmt.Fprintln(os.Stderr, "parse struct:", s.Name,internalS.Name)
+				if internalS.Name != s.Name {
+					if err := internalS.parse(pi,testMap); err != nil {
+						return err
+					}
 				}
+			} else {
+				fmt.Fprintln(os.Stderr, "ignore struct:", s.Name,internalS.Name)
 			}
 		}
 
@@ -108,7 +122,7 @@ func (s *Struct) parse(pi *PackageInfo) error {
 
 			pi.Structs[inlineS.Name] = inlineS
 			ref = inlineS.Name
-			if err := inlineS.parse(pi); err != nil {
+			if err := inlineS.parse(pi, testMap); err != nil {
 				return err
 			}
 		}
@@ -170,7 +184,7 @@ func Definitions(smdType SMDType, structs map[string]*Struct) []*Struct {
 		return nil
 	}
 
-	names := definitions(smdType, structs)
+	names := definitions(smdType, structs, 0, make(map[string]bool))
 	if smdType.Type == "Array" {
 		// add object to definitions if type array
 		names = append([]string{smdType.Ref}, names...)
@@ -191,16 +205,27 @@ func Definitions(smdType SMDType, structs map[string]*Struct) []*Struct {
 }
 
 // definitions returns list of struct names used inside smdType
-func definitions(smdType SMDType, structs map[string]*Struct) []string {
+func definitions(smdType SMDType, structs map[string]*Struct, level int, sTestMap map[string]bool) []string {
+	//if testMap2 == nil {
+	//	testMap2 = make(map[string]bool)
+	//}
+	sTestMap[smdType.Ref] = true
 	result := []string{}
 	if s, ok := structs[smdType.Ref]; ok {
 		for _, p := range s.Properties {
 			if p.SMDType.Ref != "" {
 				result = append(result, p.SMDType.Ref)
-
-				// avoid self-linked infinite recursion
-				if smdType.Ref != p.SMDType.Ref {
-					result = append(result, definitions(p.SMDType, structs)...)
+				ignore := false
+				//if level > 10 {
+					if existed, ok := sTestMap[smdType.Ref]; existed && ok {
+						ignore = true
+					}
+				//}
+				if !ignore {
+					// avoid self-linked infinite recursion
+					if smdType.Ref != p.SMDType.Ref {
+						result = append(result, definitions(p.SMDType, structs, level+1, sTestMap)...)
+					}
 				}
 			}
 		}
