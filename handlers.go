@@ -17,10 +17,25 @@ type Printer interface {
 // ServeHTTP process JSON-RPC 2.0 requests via HTTP.
 // http://www.simple-is-better.org/json-rpc/transport_http.html
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// check for CORS GET & POST requests
+	if s.options.AllowCORS {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+	}
+
 	// check for smd parameter and server settings and write schema if all conditions met,
 	if _, ok := r.URL.Query()["smd"]; ok && s.options.ExposeSMD && r.Method == http.MethodGet {
 		b, _ := json.Marshal(s.SMD())
 		w.Write(b)
+		return
+	}
+
+	// check for CORS OPTIONS pre-requests for POST https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+	if s.options.AllowCORS && r.Method == http.MethodOptions {
+		w.Header().Set("Allow", "OPTIONS, GET, POST")
+		w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, GET, POST")
+		w.Header().Set("Access-Control-Allow-Headers", "X-PINGOTHER, Content-Type")
+		w.Header().Set("Access-Control-Max-Age", "86400")
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 
@@ -56,9 +71,6 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// set headers
 	w.Header().Set("Content-Type", contentTypeJSON)
-	if s.options.AllowCORS {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-	}
 
 	// marshals data and write it to client.
 	if resp, err := json.Marshal(data); err != nil {
@@ -118,11 +130,11 @@ func SMDBoxHandler(w http.ResponseWriter, r *http.Request) {
 <head>
     <meta charset="UTF-8">
     <title>SMD Box</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/latest/css/bootstrap.min.css">
-<link href="https://cdn.jsdelivr.net/gh/mikhail-eremin/smd-box@latest/dist/app.css" rel="stylesheet"></head>
+    <link rel="stylesheet" href="https://bootswatch.com/3/paper/bootstrap.min.css">
+	<link href="https://cdn.jsdelivr.net/gh/semrush/smdbox@latest/dist/app.css" rel="stylesheet"></head>
 <body>
 <div id="json-rpc-root"></div>
-<script type="text/javascript" src="https://cdn.jsdelivr.net/gh/mikhail-eremin/smd-box@latest/dist/app.js"></script></body>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/gh/semrush/smdbox@latest/dist/app.js"></script></body>
 </html>
 	`))
 }
