@@ -107,7 +107,7 @@ func (s Server) ServeWS(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		data, err := json.Marshal(s.process(newRequestContext(r.Context(), r), message))
+		data, err := s.Do(newRequestContext(r.Context(), r), message)
 		if err != nil {
 			s.printf("marshal json response failed with err=%v", err)
 			c.WriteControl(websocket.CloseInternalServerErr, nil, time.Time{})
