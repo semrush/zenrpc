@@ -2,6 +2,8 @@ package zenrpc_test
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -289,6 +291,71 @@ func TestServer_ServeHTTPWithErrors(t *testing.T) {
 			in:  `{"jsonrpc": "2.0", "method": "arith.pow", "params": { "base": "3" }, "id": 0 }`,
 			out: `{"jsonrpc":"2.0","id":0,"error":{"code":-32602,"message":"Invalid params"}}`,
 		},
+	}
+
+	for _, c := range tc {
+		res, err := http.Post(c.url, "application/json", bytes.NewBufferString(c.in))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		resp, err := ioutil.ReadAll(res.Body)
+		res.Body.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if string(resp) != c.out {
+			t.Errorf("Input: %s\n got %s expected %s", c.in, resp, c.out)
+		}
+	}
+}
+
+func TestServer_Extensions(t *testing.T) {
+	middleware := func(h zenrpc.InvokeFunc) zenrpc.InvokeFunc {
+		return func(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
+			r := h(ctx, method, params)
+
+			// ignore multiply method
+			if method != testdata.RPC.ArithService.Multiply {
+				r.Extensions = map[string]interface{}{"debug": "true"}
+			}
+
+			return r
+		}
+	}
+
+	server := zenrpc.NewServer(zenrpc.Options{AllowCORS: true, HideErrorDataField: true})
+	server.Register("arith", &testdata.ArithService{})
+	server.Use(middleware)
+
+	ts := httptest.NewServer(http.HandlerFunc(server.ServeHTTP))
+	defer ts.Close()
+
+	var tc = []struct {
+		url     string
+		in, out string
+	}{
+		{
+			url: ts.URL,
+			in:  `{"jsonrpc": "2.0", "method": "multiple1", "id": 1 }`,
+			out: `{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Method not found"}}`},
+		{
+			url: ts.URL,
+			in:  `{"jsonrpc": "2.0", "method": "arith.divide", "params": { "a": 1, "b": 24 }}`,
+			out: ``},
+		{
+			url: ts.URL,
+			in:  `{"jsonrpc": "2.0", "method": "arith.divide", "params": { "a": 1, "b": 24 }, "id": 1 }`,
+			out: `{"jsonrpc":"2.0","id":1,"result":{"Quo":0,"rem":1},"extensions":{"debug":"true"}}`},
+		{
+			url: ts.URL,
+			in:  `{"jsonrpc": "2.0", "method": "arith.multiply", "params": { "a": 1, "b": 24 }, "id": 1 }`,
+			out: `{"jsonrpc":"2.0","id":1,"result":24}`},
+		{
+			url: ts.URL,
+			in:  `{"jsonrpc": "2.0", "method": "arith.checkerror", "params": [ true ], "id": 1 }`,
+			out: `{"jsonrpc":"2.0","id":1,"error":{"code":-32603,"message":"test"},"extensions":{"debug":"true"}}`},
 	}
 
 	for _, c := range tc {

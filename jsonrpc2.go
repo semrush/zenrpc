@@ -94,6 +94,9 @@ type Response struct {
 	// This member MUST NOT exist if there was no error triggered during invocation.
 	// The value for this member MUST be an Object as defined in section 5.1.
 	Error *Error `json:"error,omitempty"`
+
+	// Extensions is additional field for extending standard response. It could be useful for tracing, method execution, etc...
+	Extensions map[string]interface{} `json:"extensions,omitempty"`
 }
 
 // JSON is temporary method that silences error during json marshalling.
@@ -120,6 +123,7 @@ type Error struct {
 	// The value of this member is defined by the Server (e.g. detailed error information, nested errors etc.).
 	Data interface{} `json:"data,omitempty"`
 
+	// Err is inner error.
 	Err error `json:"-"`
 }
 
