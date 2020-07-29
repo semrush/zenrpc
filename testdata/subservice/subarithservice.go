@@ -1,4 +1,4 @@
-package testdata
+package subarithservice
 
 import (
 	"context"
@@ -8,45 +8,45 @@ import (
 	"math"
 )
 
-type ArithService struct{ zenrpc.Service }
-
-type Point struct {
-	X, Y int // coordinate
-	Z    int `json:"-"`
-}
+type SubArithService struct{} //zenrpc
 
 // Sum sums two digits and returns error with error code as result and IP from context.
-func (as ArithService) Sum(ctx context.Context, a, b int) (bool, *zenrpc.Error) {
+func (as SubArithService) Sum(ctx context.Context, a, b int) (bool, *zenrpc.Error) {
 	r, _ := zenrpc.RequestFromContext(ctx)
 
 	return true, zenrpc.NewStringError(a+b, r.Host)
 }
 
-func (as ArithService) Positive() (bool, *zenrpc.Error) {
+func (as SubArithService) Positive() (bool, *zenrpc.Error) {
 	return true, nil
 }
 
-func (ArithService) DoSomething() {
+func (SubArithService) ReturnPointFromSamePackage() Point {
 	// some optimistic operations
+	return Point{}
 }
 
-func (ArithService) GetPoints() []model.Point {
+func (SubArithService) GetPoints() []model.Point {
 	return []model.Point{}
 }
 
-func (ArithService) DoSomethingWithPoint(p model.Point) model.Point {
+func (SubArithService) GetPointsFromSamePackage() []Point {
+	return []Point{}
+}
+
+func (SubArithService) DoSomethingWithPoint(p model.Point) model.Point {
 	// some optimistic operations
 	return p
 }
 
 // Multiply multiples two digits and returns result.
-func (as ArithService) Multiply(a, b int) int {
+func (as SubArithService) Multiply(a, b int) int {
 	return a * b
 }
 
 // CheckError throws error is isErr true.
 //zenrpc:500 test error
-func (ArithService) CheckError(isErr bool) error {
+func (SubArithService) CheckError(isErr bool) error {
 	if isErr {
 		return errors.New("test")
 	}
@@ -56,7 +56,7 @@ func (ArithService) CheckError(isErr bool) error {
 
 // CheckError throws zenrpc error is isErr true.
 //zenrpc:500 test error
-func (ArithService) CheckZenRPCError(isErr bool) *zenrpc.Error {
+func (SubArithService) CheckZenRPCError(isErr bool) *zenrpc.Error {
 	if isErr {
 		return zenrpc.NewStringError(500, "test")
 	}
@@ -79,7 +79,7 @@ type Quotient struct {
 //zenrpc:quo		result is Quotient, should be named var
 //zenrpc:401 		we do not serve 1
 //zenrpc:-32603		divide by zero
-func (as *ArithService) Divide(a, b int) (quo *Quotient, err error) {
+func (as *SubArithService) Divide(a, b int) (quo *Quotient, err error) {
 	if b == 0 {
 		return nil, errors.New("divide by zero")
 	} else if b == 1 {
@@ -94,18 +94,18 @@ func (as *ArithService) Divide(a, b int) (quo *Quotient, err error) {
 
 // Pow returns x**y, the base-x exponential of y. If Exp is not set then default value is 2.
 //zenrpc:exp=2 	exponent could be empty
-func (as *ArithService) Pow(base float64, exp *float64) float64 {
+func (as *SubArithService) Pow(base float64, exp *float64) float64 {
 	return math.Pow(base, *exp)
 }
 
 // PI returns math.Pi.
-func (ArithService) Pi() float64 {
+func (SubArithService) Pi() float64 {
 	return math.Pi
 }
 
 // SumArray returns sum all items from array
 //zenrpc:array=[]float64{1,2,4}
-func (as *ArithService) SumArray(array *[]float64) float64 {
+func (as *SubArithService) SumArray(array *[]float64) float64 {
 	var sum float64
 
 	for _, i := range *array {

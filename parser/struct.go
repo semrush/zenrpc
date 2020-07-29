@@ -171,7 +171,8 @@ func Definitions(smdType SMDType, structs map[string]*Struct) []*Struct {
 	}
 
 	names := definitions(smdType, structs)
-	if smdType.Type == "Array" {
+	// todo what about arrays?
+	if smdType.Type == "Array" /*|| smdType.Type == "Object" */ {
 		// add object to definitions if type array
 		names = append([]string{smdType.Ref}, names...)
 	}

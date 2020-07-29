@@ -34,4 +34,8 @@ func (s CatalogueService) Second(campaigns []Campaign) (bool, error) {
 	return true, nil
 }
 
+func (s CatalogueService) Third() (Campaign, error) {
+	return Campaign{}, nil
+}
+
 //go:generate zenrpc

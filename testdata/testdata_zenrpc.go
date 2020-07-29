@@ -9,19 +9,21 @@ import (
 	"github.com/semrush/zenrpc/v2"
 	"github.com/semrush/zenrpc/v2/smd"
 
+	"github.com/prometheus/common/model"
 	"github.com/semrush/zenrpc/v2/testdata/model"
 )
 
 var RPC = struct {
-	ArithService     struct{ Sum, Positive, DoSomething, DoSomethingWithPoint, Multiply, CheckError, CheckZenRPCError, Divide, Pow, Pi, SumArray string }
-	CatalogueService struct{ First, Second string }
+	ArithService     struct{ Sum, Positive, DoSomething, GetPoints, DoSomethingWithPoint, Multiply, CheckError, CheckZenRPCError, Divide, Pow, Pi, SumArray string }
+	CatalogueService struct{ First, Second, Third string }
 	PhoneBook        struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }
 	PrintService     struct{ PrintRequiredDefault, PrintOptionalWithDefault, PrintRequired, PrintOptional string }
 }{
-	ArithService: struct{ Sum, Positive, DoSomething, DoSomethingWithPoint, Multiply, CheckError, CheckZenRPCError, Divide, Pow, Pi, SumArray string }{
+	ArithService: struct{ Sum, Positive, DoSomething, GetPoints, DoSomethingWithPoint, Multiply, CheckError, CheckZenRPCError, Divide, Pow, Pi, SumArray string }{
 		Sum:                  "sum",
 		Positive:             "positive",
 		DoSomething:          "dosomething",
+		GetPoints:            "getpoints",
 		DoSomethingWithPoint: "dosomethingwithpoint",
 		Multiply:             "multiply",
 		CheckError:           "checkerror",
@@ -31,9 +33,10 @@ var RPC = struct {
 		Pi:                   "pi",
 		SumArray:             "sumarray",
 	},
-	CatalogueService: struct{ First, Second string }{
+	CatalogueService: struct{ First, Second, Third string }{
 		First:  "first",
 		Second: "second",
+		Third:  "third",
 	},
 	PhoneBook: struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }{
 		Get:            "get",
@@ -90,6 +93,33 @@ func (ArithService) SMD() smd.ServiceInfo {
 				Description: ``,
 				Parameters:  []smd.JSONSchema{},
 			},
+			"GetPoints": {
+				Description: ``,
+				Parameters:  []smd.JSONSchema{},
+				Returns: smd.JSONSchema{
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Array,
+					Items: map[string]string{
+						"$ref": "#/definitions/model.Point",
+					},
+					Definitions: map[string]smd.Definition{
+						"model.Point": {
+							Type: "object",
+							Properties: map[string]smd.Property{
+								"X": {
+									Description: `coordinate`,
+									Type:        smd.Integer,
+								},
+								"Y": {
+									Description: `coordinate`,
+									Type:        smd.Integer,
+								},
+							},
+						},
+					},
+				},
+			},
 			"DoSomethingWithPoint": {
 				Description: ``,
 				Parameters: []smd.JSONSchema{
@@ -98,7 +128,31 @@ func (ArithService) SMD() smd.ServiceInfo {
 						Optional:    false,
 						Description: ``,
 						Type:        smd.Object,
-						Properties:  map[string]smd.Property{},
+						Properties: map[string]smd.Property{
+							"X": {
+								Description: `coordinate`,
+								Type:        smd.Integer,
+							},
+							"Y": {
+								Description: `coordinate`,
+								Type:        smd.Integer,
+							},
+						},
+					},
+				},
+				Returns: smd.JSONSchema{
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Object,
+					Properties: map[string]smd.Property{
+						"X": {
+							Description: `coordinate`,
+							Type:        smd.Integer,
+						},
+						"Y": {
+							Description: `coordinate`,
+							Type:        smd.Integer,
+						},
 					},
 				},
 			},
@@ -274,6 +328,9 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 	case RPC.ArithService.DoSomething:
 		s.DoSomething()
 
+	case RPC.ArithService.GetPoints:
+		resp.Set(s.GetPoints())
+
 	case RPC.ArithService.DoSomethingWithPoint:
 		var args = struct {
 			P model.Point `json:"p"`
@@ -291,7 +348,7 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 			}
 		}
 
-		s.DoSomethingWithPoint(args.P)
+		resp.Set(s.DoSomethingWithPoint(args.P))
 
 	case RPC.ArithService.Multiply:
 		var args = struct {
@@ -594,6 +651,80 @@ func (CatalogueService) SMD() smd.ServiceInfo {
 					Type:        smd.Boolean,
 				},
 			},
+			"Third": {
+				Description: ``,
+				Parameters:  []smd.JSONSchema{},
+				Returns: smd.JSONSchema{
+					Description: ``,
+					Optional:    false,
+					Type:        smd.Object,
+					Properties: map[string]smd.Property{
+						"id": {
+							Description: ``,
+							Type:        smd.Integer,
+						},
+						"group": {
+							Description: ``,
+							Type:        smd.Array,
+							Items: map[string]string{
+								"$ref": "#/definitions/Group",
+							},
+						},
+					},
+					Definitions: map[string]smd.Definition{
+						"Group": {
+							Type: "object",
+							Properties: map[string]smd.Property{
+								"id": {
+									Description: ``,
+									Type:        smd.Integer,
+								},
+								"title": {
+									Description: ``,
+									Type:        smd.String,
+								},
+								"nodes": {
+									Description: ``,
+									Type:        smd.Array,
+									Items: map[string]string{
+										"$ref": "#/definitions/Group",
+									},
+								},
+								"group": {
+									Description: ``,
+									Type:        smd.Array,
+									Items: map[string]string{
+										"$ref": "#/definitions/Group",
+									},
+								},
+								"child": {
+									Description: ``,
+									Ref:         "#/definitions/Group",
+									Type:        smd.Object,
+								},
+								"sub": {
+									Description: ``,
+									Ref:         "#/definitions/SubGroup",
+									Type:        smd.Object,
+								},
+							},
+						},
+						"SubGroup": {
+							Type: "object",
+							Properties: map[string]smd.Property{
+								"id": {
+									Description: ``,
+									Type:        smd.Integer,
+								},
+								"title": {
+									Description: ``,
+									Type:        smd.String,
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -641,6 +772,9 @@ func (s CatalogueService) Invoke(ctx context.Context, method string, params json
 		}
 
 		resp.Set(s.Second(args.Campaigns))
+
+	case RPC.CatalogueService.Third:
+		resp.Set(s.Third())
 
 	default:
 		resp = zenrpc.NewResponseError(nil, zenrpc.MethodNotFound, "", nil)
