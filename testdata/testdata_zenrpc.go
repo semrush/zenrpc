@@ -6,10 +6,10 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/semrush/zenrpc"
-	"github.com/semrush/zenrpc/smd"
+	"github.com/semrush/zenrpc/v2"
+	"github.com/semrush/zenrpc/v2/smd"
 
-	"github.com/semrush/zenrpc/testdata/model"
+	"github.com/semrush/zenrpc/v2/testdata/model"
 )
 
 var RPC = struct {
@@ -98,16 +98,7 @@ func (ArithService) SMD() smd.ServiceInfo {
 						Optional:    false,
 						Description: ``,
 						Type:        smd.Object,
-						Properties: map[string]smd.Property{
-							"X": {
-								Description: `coordinate`,
-								Type:        smd.Integer,
-							},
-							"Y": {
-								Description: `coordinate`,
-								Type:        smd.Integer,
-							},
-						},
+						Properties:  map[string]smd.Property{},
 					},
 				},
 			},
