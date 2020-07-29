@@ -13,8 +13,8 @@ import (
 	"testing"
 
 	"github.com/gorilla/websocket"
-	"github.com/semrush/zenrpc"
-	"github.com/semrush/zenrpc/testdata"
+	"github.com/semrush/zenrpc/v2"
+	"github.com/semrush/zenrpc/v2/testdata"
 )
 
 func TestServer_ServeHTTPWithHeaders(t *testing.T) {
