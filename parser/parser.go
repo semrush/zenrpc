@@ -6,7 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/ioutil"
-	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -140,12 +140,19 @@ func (pi *PackageInfo) Parse(filename string) error {
 		pi.Dir = dir
 	}
 
-	files, err := ioutil.ReadDir(pi.Dir)
+	err := pi.rememberEntryPointPackageName(filename)
 	if err != nil {
 		return err
 	}
 
-	if err := pi.parseFiles(files); err != nil {
+	// filePaths, err := pi.scanDirectoryFilePathsRecursive(pi.Dir, []string{})
+	// use recursive dependencies getter from helpers
+	filePaths, err := GetDependencies(filename)
+	if err != nil {
+		return err
+	}
+
+	if err := pi.parseFiles(filePaths); err != nil {
 		return err
 	}
 
@@ -162,40 +169,79 @@ func (pi *PackageInfo) Parse(filename string) error {
 	return nil
 }
 
-func (pi *PackageInfo) parseFiles(files []os.FileInfo) error {
-	astFiles := []*ast.File{}
-	// first loop: parse files and structs
-	for _, f := range files {
-		if f.IsDir() {
-			continue
-		}
+func (pi *PackageInfo) parseOsFileToAstFile(filename string) (*ast.File, error) {
+	astFile, err := parser.ParseFile(token.NewFileSet(), filename, nil, parser.ParseComments)
+	if err != nil {
+		return nil, err
+	}
 
-		if !strings.HasSuffix(f.Name(), goFileSuffix) ||
-			strings.HasSuffix(f.Name(), GenerateFileSuffix) || strings.HasSuffix(f.Name(), testFileSuffix) {
-			continue
-		}
+	// for debug
+	//ast.Print(fset, astFile)
 
-		astFile, err := parser.ParseFile(token.NewFileSet(), filepath.Join(pi.Dir, f.Name()), nil, parser.ParseComments)
+	if pi.PackageName != astFile.Name.Name {
+		pi.Scopes[astFile.Name.Name] = append(pi.Scopes[astFile.Name.Name], astFile.Scope) // collect other package scopes
+	} else {
+		pi.Scopes["."] = append(pi.Scopes["."], astFile.Scope) // collect current package scopes
+	}
+
+	// get structs for zenrpc
+	pi.parseServices(astFile)
+
+	pi.Imports = append(pi.Imports, astFile.Imports...) // collect imports
+	return astFile, nil
+}
+
+func (pi *PackageInfo) scanDirectoryFilePathsRecursive(dirPath string, paths []string) ([]string, error) {
+	files, err := ioutil.ReadDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+	for _, file := range files {
+		if !file.IsDir() {
+			paths = append(paths, path.Join(dirPath, file.Name()))
+		} else {
+			paths, err = pi.scanDirectoryFilePathsRecursive(path.Join(dirPath, file.Name()), paths)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return paths, nil
+}
+
+func (pi *PackageInfo) rememberEntryPointPackageName(entrypoint string) error {
+	// remember current package name from first incoming file
+	if len(pi.PackageName) == 0 {
+		packageName, err := EntryPointPackageName(entrypoint)
 		if err != nil {
 			return err
 		}
-
-		// for debug
-		//ast.Print(fset, astFile)
-
-		if len(pi.PackageName) == 0 {
-			pi.PackageName = astFile.Name.Name
-		} else if pi.PackageName != astFile.Name.Name {
-			continue
+		pi.PackageName = packageName
+	}
+	return nil
+}
+func (pi *PackageInfo) astFiles(filepaths []string) ([]*ast.File, error) {
+	astFiles := []*ast.File{}
+	// first loop: parse suitable files and structs
+	for _, f := range filepaths {
+		if pi.isSuitableFile(f) {
+			astFile, err := pi.parseOsFileToAstFile(f)
+			if err != nil {
+				return nil, err
+			}
+			astFiles = append(astFiles, astFile)
 		}
+	}
 
-		// get structs for zenrpc
-		pi.parseServices(astFile)
+	return astFiles, nil
+}
 
-		pi.Scopes["."] = append(pi.Scopes["."], astFile.Scope) // collect current package scopes
-		pi.Imports = append(pi.Imports, astFile.Imports...)    // collect imports
+func (pi *PackageInfo) parseFiles(filepaths []string) error {
+	// first loop, get needed ast files and their structs
 
-		astFiles = append(astFiles, astFile)
+	astFiles, err := pi.astFiles(filepaths)
+	if err != nil {
+		return err
 	}
 
 	// second loop: parse methods
@@ -241,6 +287,14 @@ func (pi *PackageInfo) parseServices(f *ast.File) {
 			}
 		}
 	}
+}
+
+func (pi *PackageInfo) isSuitableFile(filepath string) bool {
+	if !strings.HasSuffix(filepath, goFileSuffix) ||
+		strings.HasSuffix(filepath, GenerateFileSuffix) || strings.HasSuffix(filepath, testFileSuffix) {
+		return false
+	}
+	return true
 }
 
 func (pi *PackageInfo) parseMethods(f *ast.File) error {
