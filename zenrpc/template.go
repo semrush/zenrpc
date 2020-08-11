@@ -61,7 +61,7 @@ import (
 	"github.com/semrush/zenrpc/v2"
 	"github.com/semrush/zenrpc/v2/smd"
 
-	{{ range .ImportsForGeneration}}
+	{{ range .ImportsIncludedToGeneratedCode}}
 		{{if .Name}}{{.Name.Name}} {{end}}{{.Path.Value}}
 	{{- end }}
 )
