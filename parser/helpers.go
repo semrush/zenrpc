@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"github.com/thoas/go-funk"
+	"go/ast"
 	"golang.org/x/tools/go/packages"
 	"path"
 	"strings"
@@ -40,6 +41,30 @@ func getDependenciesFilenames(dir string) ([]string, error) {
 	return funk.UniqString(goFiles), nil
 }
 
+func GetDependenciesAstFiles(filename string) ([]*ast.File, error) {
+	pkgs, err := loadPackageWithSyntax(path.Dir(filename))
+	if err != nil {
+		return nil, err
+	}
+	astFiles := []*ast.File{}
+	done := map[string]bool{}
+	for _, pkg := range pkgs {
+		if _, ok := done[pkg.Name]; ok {
+			continue
+		}
+		astFiles = append(astFiles, pkg.Syntax...)
+		done[pkg.Name] = true
+		for _, childPack := range pkg.Imports {
+			if _, ok := done[childPack.Name]; ok {
+				continue
+			}
+			astFiles = append(astFiles, childPack.Syntax...)
+			done[childPack.Name] = true
+		}
+	}
+	return astFiles, nil
+}
+
 func goFilesFromPackage(pkg *packages.Package) []string {
 	files := []string{}
 	files = append(files, pkg.GoFiles...)
@@ -60,5 +85,14 @@ func EntryPointPackageName(filename string) (string, error) {
 func loadPackage(path string) ([]*packages.Package, error) {
 	return packages.Load(&packages.Config{
 		Mode: packages.NeedImports | packages.NeedFiles | packages.NeedName,
+	}, path)
+}
+
+func loadPackageWithSyntax(path string) ([]*packages.Package, error) {
+	return packages.Load(&packages.Config{
+		Mode: packages.NeedImports |
+			packages.NeedFiles |
+			packages.NeedName |
+			packages.NeedSyntax,
 	}, path)
 }

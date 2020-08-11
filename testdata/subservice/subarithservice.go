@@ -21,7 +21,7 @@ func (as SubArithService) Positive() (bool, *zenrpc.Error) {
 	return true, nil
 }
 
-func (SubArithService) ReturnPointFromSamePackage() Point {
+func (SubArithService) ReturnPointFromSamePackage(p Point) Point {
 	// some optimistic operations
 	return Point{}
 }

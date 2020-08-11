@@ -6,12 +6,11 @@ import (
 	"github.com/semrush/zenrpc/v2/parser"
 	"go/format"
 	"os"
-	"path/filepath"
 	"time"
 )
 
 const (
-	version = "1.0.1"
+	version = "2.0.0"
 
 	openIssueURL = "https://github.com/semrush/zenrpc/issues/new"
 	githubURL    = "https://github.com/semrush/zenrpc"
@@ -35,7 +34,23 @@ func main() {
 
 	fmt.Printf("Entrypoint: %s\n", filename)
 
-	pi := parser.NewPackageInfo()
+	// create package info
+	pi, err := parser.NewPackageInfo(filename)
+	if err != nil {
+		printError(err)
+		os.Exit(1)
+	}
+
+	outputFileName := pi.OutputFilename()
+
+	// remove output file if it already exists
+	if _, err := os.Stat(outputFileName); err == nil {
+		if err := os.Remove(outputFileName); err != nil {
+			printError(err)
+			os.Exit(1)
+		}
+	}
+
 	if err := pi.Parse(filename); err != nil {
 		printError(err)
 		os.Exit(1)
@@ -46,8 +61,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	outputFileName, err := generateFile(pi)
-	if err != nil {
+	if err := generateFile(outputFileName, pi); err != nil {
 		printError(err)
 		os.Exit(1)
 	}
@@ -70,27 +84,26 @@ func printError(err error) {
 	fmt.Printf("\t%s\n\n", githubURL)
 }
 
-func generateFile(pi *parser.PackageInfo) (string, error) {
-	outputFileName := filepath.Join(pi.Dir, pi.PackageName+parser.GenerateFileSuffix)
+func generateFile(outputFileName string, pi *parser.PackageInfo) error {
 	file, err := os.Create(outputFileName)
 	if err != nil {
-		return outputFileName, err
+		return err
 	}
 	defer file.Close()
 
 	output := new(bytes.Buffer)
 	if err := serviceTemplate.Execute(output, pi); err != nil {
-		return outputFileName, err
+		return err
 	}
 
 	source, err := format.Source(output.Bytes())
 	if err != nil {
-		return outputFileName, err
+		return err
 	}
 
 	if _, err = file.Write(source); err != nil {
-		return outputFileName, err
+		return err
 	}
 
-	return outputFileName, nil
+	return nil
 }
