@@ -35,8 +35,8 @@ type PackageInfo struct {
 	Structs map[string]*Struct
 	Imports []*ast.ImportSpec
 
-	StructsNamespacesFromArgs map[string]struct{} // set of structs names from arguments for printing imports
-	ImportsForGeneration      []*ast.ImportSpec
+	PackageNamesAndAliasesUsedInServices map[string]struct{} // set of structs names from arguments for printing imports
+	ImportsIncludedToGeneratedCode       []*ast.ImportSpec
 }
 
 type Service struct {
@@ -138,8 +138,8 @@ func NewPackageInfo(filename string) (*PackageInfo, error) {
 		Structs: make(map[string]*Struct),
 		Imports: []*ast.ImportSpec{},
 
-		StructsNamespacesFromArgs: make(map[string]struct{}),
-		ImportsForGeneration:      []*ast.ImportSpec{},
+		PackageNamesAndAliasesUsedInServices: make(map[string]struct{}),
+		ImportsIncludedToGeneratedCode:       []*ast.ImportSpec{},
 	}, nil
 }
 
@@ -159,20 +159,15 @@ func (pi *PackageInfo) Parse(filename string) error {
 		pi.collectImports(astFile)
 	}
 
-	// second loop: parse methods
+	// second loop: parse methods. It runs in separate loop because we need all services to be collected for this parsing
 	for _, f := range astFiles {
 		if err := pi.parseMethods(f); err != nil {
 			return err
 		}
 	}
 
-	// collect scopes from imported packages
-	pi.Imports = uniqueImports(pi.Imports)
-	pi.ImportsForGeneration = filterImports(pi.Imports, pi.StructsNamespacesFromArgs)
-	pi.Imports = filterImports(pi.Imports, uniqueStructsNamespaces(pi.Structs))
-	if err := pi.parseImports(pi.Imports); err != nil {
-		return err
-	}
+	// collect imports for generated code - only include imports that are explicitly imported in service code (all imports with definitions are more)
+	pi.collectImportsForGeneratedCode()
 
 	pi.parseStructs()
 
@@ -189,6 +184,11 @@ func (pi *PackageInfo) collectScopes(astFile *ast.File) {
 
 func (pi *PackageInfo) collectImports(astFile *ast.File) {
 	pi.Imports = append(pi.Imports, astFile.Imports...) // collect imports
+}
+
+func (pi *PackageInfo) collectImportsForGeneratedCode() {
+	// collect scopes from imported packages
+	pi.ImportsIncludedToGeneratedCode = filterImports(uniqueImports(pi.Imports), pi.PackageNamesAndAliasesUsedInServices)
 }
 
 func (pi *PackageInfo) collectServices(f *ast.File) {
@@ -404,8 +404,8 @@ func (m *Method) parseArguments(pi *PackageInfo, fdecl *ast.FuncDecl, serviceNam
 
 			// collect namespaces (imports)
 			if s.Namespace != "" {
-				if _, ok := pi.StructsNamespacesFromArgs[s.Namespace]; !ok {
-					pi.StructsNamespacesFromArgs[s.Namespace] = struct{}{}
+				if _, ok := pi.PackageNamesAndAliasesUsedInServices[s.Namespace]; !ok {
+					pi.PackageNamesAndAliasesUsedInServices[s.Namespace] = struct{}{}
 				}
 			}
 
@@ -621,6 +621,7 @@ func parseType(expr ast.Expr) string {
 	}
 }
 
+// Returned value will be used as smd.{Value} variable from smd package
 func parseSMDType(expr ast.Expr) (string, string) {
 	switch v := expr.(type) {
 	case *ast.StarExpr:

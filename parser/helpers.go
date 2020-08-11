@@ -49,17 +49,17 @@ func GetDependenciesAstFiles(filename string) ([]*ast.File, error) {
 	astFiles := []*ast.File{}
 	done := map[string]bool{}
 	for _, pkg := range pkgs {
-		if _, ok := done[pkg.Name]; ok {
+		if _, ok := done[pkg.PkgPath]; ok {
 			continue
 		}
 		astFiles = append(astFiles, pkg.Syntax...)
-		done[pkg.Name] = true
+		done[pkg.PkgPath] = true
 		for _, childPack := range pkg.Imports {
-			if _, ok := done[childPack.Name]; ok {
+			if _, ok := done[childPack.PkgPath]; ok {
 				continue
 			}
 			astFiles = append(astFiles, childPack.Syntax...)
-			done[childPack.Name] = true
+			done[childPack.PkgPath] = true
 		}
 	}
 	return astFiles, nil
