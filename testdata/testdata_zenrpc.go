@@ -9,7 +9,6 @@ import (
 	"github.com/semrush/zenrpc/v2"
 	"github.com/semrush/zenrpc/v2/smd"
 
-	"github.com/prometheus/common/model"
 	"github.com/semrush/zenrpc/v2/testdata/model"
 )
 

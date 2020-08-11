@@ -3,10 +3,7 @@ package parser
 import (
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
-	"io/ioutil"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -28,10 +25,11 @@ const (
 
 // PackageInfo represents struct info for XXX_zenrpc.go file generation
 type PackageInfo struct {
-	Dir string
-
+	EntryPoint  string
+	Dir         string
 	PackageName string
-	Services    []*Service
+
+	Services []*Service
 
 	Scopes  map[string][]*ast.Scope // key - import name, value - array of scopes from each package file
 	Structs map[string]*Struct
@@ -119,9 +117,22 @@ type SMDError struct {
 	Description string
 }
 
-func NewPackageInfo() *PackageInfo {
+func NewPackageInfo(filename string) (*PackageInfo, error) {
+	dir, err := filepath.Abs(filepath.Dir(filename))
+	if err != nil {
+		return nil, err
+	}
+
+	packageName, err := EntryPointPackageName(filename)
+	if err != nil {
+		return nil, err
+	}
+
 	return &PackageInfo{
-		Services: []*Service{},
+		EntryPoint:  filename,
+		Dir:         dir,
+		PackageName: packageName,
+		Services:    []*Service{},
 
 		Scopes:  make(map[string][]*ast.Scope),
 		Structs: make(map[string]*Struct),
@@ -129,31 +140,30 @@ func NewPackageInfo() *PackageInfo {
 
 		StructsNamespacesFromArgs: make(map[string]struct{}),
 		ImportsForGeneration:      []*ast.ImportSpec{},
-	}
+	}, nil
 }
 
 // ParseFiles parse all files associated with package from original file
 func (pi *PackageInfo) Parse(filename string) error {
-	if dir, err := filepath.Abs(filepath.Dir(filename)); err != nil {
-		return err
-	} else {
-		pi.Dir = dir
-	}
-
-	err := pi.rememberEntryPointPackageName(filename)
+	astFiles, err := GetDependenciesAstFiles(filename)
 	if err != nil {
 		return err
 	}
 
-	// filePaths, err := pi.scanDirectoryFilePathsRecursive(pi.Dir, []string{})
-	// use recursive dependencies getter from helpers
-	filePaths, err := GetDependencies(filename)
-	if err != nil {
-		return err
+	for _, astFile := range astFiles {
+		// collect scopes
+		pi.collectScopes(astFile)
+		// get structs for zenrpc
+		pi.collectServices(astFile)
+		// get imports
+		pi.collectImports(astFile)
 	}
 
-	if err := pi.parseFiles(filePaths); err != nil {
-		return err
+	// second loop: parse methods
+	for _, f := range astFiles {
+		if err := pi.parseMethods(f); err != nil {
+			return err
+		}
 	}
 
 	// collect scopes from imported packages
@@ -169,92 +179,19 @@ func (pi *PackageInfo) Parse(filename string) error {
 	return nil
 }
 
-func (pi *PackageInfo) parseOsFileToAstFile(filename string) (*ast.File, error) {
-	astFile, err := parser.ParseFile(token.NewFileSet(), filename, nil, parser.ParseComments)
-	if err != nil {
-		return nil, err
-	}
-
-	// for debug
-	//ast.Print(fset, astFile)
-
+func (pi *PackageInfo) collectScopes(astFile *ast.File) {
 	if pi.PackageName != astFile.Name.Name {
 		pi.Scopes[astFile.Name.Name] = append(pi.Scopes[astFile.Name.Name], astFile.Scope) // collect other package scopes
 	} else {
 		pi.Scopes["."] = append(pi.Scopes["."], astFile.Scope) // collect current package scopes
 	}
+}
 
-	// get structs for zenrpc
-	pi.parseServices(astFile)
-
+func (pi *PackageInfo) collectImports(astFile *ast.File) {
 	pi.Imports = append(pi.Imports, astFile.Imports...) // collect imports
-	return astFile, nil
 }
 
-func (pi *PackageInfo) scanDirectoryFilePathsRecursive(dirPath string, paths []string) ([]string, error) {
-	files, err := ioutil.ReadDir(dirPath)
-	if err != nil {
-		return nil, err
-	}
-	for _, file := range files {
-		if !file.IsDir() {
-			paths = append(paths, path.Join(dirPath, file.Name()))
-		} else {
-			paths, err = pi.scanDirectoryFilePathsRecursive(path.Join(dirPath, file.Name()), paths)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-	return paths, nil
-}
-
-func (pi *PackageInfo) rememberEntryPointPackageName(entrypoint string) error {
-	// remember current package name from first incoming file
-	if len(pi.PackageName) == 0 {
-		packageName, err := EntryPointPackageName(entrypoint)
-		if err != nil {
-			return err
-		}
-		pi.PackageName = packageName
-	}
-	return nil
-}
-func (pi *PackageInfo) astFiles(filepaths []string) ([]*ast.File, error) {
-	astFiles := []*ast.File{}
-	// first loop: parse suitable files and structs
-	for _, f := range filepaths {
-		if pi.isSuitableFile(f) {
-			astFile, err := pi.parseOsFileToAstFile(f)
-			if err != nil {
-				return nil, err
-			}
-			astFiles = append(astFiles, astFile)
-		}
-	}
-
-	return astFiles, nil
-}
-
-func (pi *PackageInfo) parseFiles(filepaths []string) error {
-	// first loop, get needed ast files and their structs
-
-	astFiles, err := pi.astFiles(filepaths)
-	if err != nil {
-		return err
-	}
-
-	// second loop: parse methods
-	for _, f := range astFiles {
-		if err := pi.parseMethods(f); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (pi *PackageInfo) parseServices(f *ast.File) {
+func (pi *PackageInfo) collectServices(f *ast.File) {
 	for _, decl := range f.Decls {
 		gdecl, ok := decl.(*ast.GenDecl)
 		if !ok || gdecl.Tok != token.TYPE {
@@ -287,14 +224,6 @@ func (pi *PackageInfo) parseServices(f *ast.File) {
 			}
 		}
 	}
-}
-
-func (pi *PackageInfo) isSuitableFile(filepath string) bool {
-	if !strings.HasSuffix(filepath, goFileSuffix) ||
-		strings.HasSuffix(filepath, GenerateFileSuffix) || strings.HasSuffix(filepath, testFileSuffix) {
-		return false
-	}
-	return true
 }
 
 func (pi *PackageInfo) parseMethods(f *ast.File) error {
@@ -385,6 +314,10 @@ func (pi PackageInfo) String() string {
 	}
 
 	return result
+}
+
+func (pi PackageInfo) OutputFilename() string {
+	return filepath.Join(pi.Dir, pi.PackageName+GenerateFileSuffix)
 }
 
 // HasErrorVariable define adding err variable to generated Invoke function

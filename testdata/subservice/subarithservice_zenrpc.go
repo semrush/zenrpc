@@ -69,7 +69,32 @@ func (SubArithService) SMD() smd.ServiceInfo {
 			},
 			"ReturnPointFromSamePackage": {
 				Description: ``,
-				Parameters:  []smd.JSONSchema{},
+				Parameters: []smd.JSONSchema{
+					{
+						Name:        "p",
+						Optional:    false,
+						Description: ``,
+						Type:        smd.Object,
+						Properties: map[string]smd.Property{
+							"Name": {
+								Description: ``,
+								Type:        smd.String,
+							},
+							"SomeField": {
+								Description: ``,
+								Type:        smd.String,
+							},
+							"A": {
+								Description: `coordinate`,
+								Type:        smd.Integer,
+							},
+							"B": {
+								Description: `coordinate`,
+								Type:        smd.Integer,
+							},
+						},
+					},
+				},
 				Returns: smd.JSONSchema{
 					Description: ``,
 					Optional:    false,
@@ -108,6 +133,14 @@ func (SubArithService) SMD() smd.ServiceInfo {
 						"model.Point": {
 							Type: "object",
 							Properties: map[string]smd.Property{
+								"Name": {
+									Description: ``,
+									Type:        smd.String,
+								},
+								"SomeField": {
+									Description: ``,
+									Type:        smd.String,
+								},
 								"X": {
 									Description: `coordinate`,
 									Type:        smd.Integer,
@@ -165,6 +198,14 @@ func (SubArithService) SMD() smd.ServiceInfo {
 						Description: ``,
 						Type:        smd.Object,
 						Properties: map[string]smd.Property{
+							"Name": {
+								Description: ``,
+								Type:        smd.String,
+							},
+							"SomeField": {
+								Description: ``,
+								Type:        smd.String,
+							},
 							"X": {
 								Description: `coordinate`,
 								Type:        smd.Integer,
@@ -181,6 +222,14 @@ func (SubArithService) SMD() smd.ServiceInfo {
 					Optional:    false,
 					Type:        smd.Object,
 					Properties: map[string]smd.Property{
+						"Name": {
+							Description: ``,
+							Type:        smd.String,
+						},
+						"SomeField": {
+							Description: ``,
+							Type:        smd.String,
+						},
 						"X": {
 							Description: `coordinate`,
 							Type:        smd.Integer,
@@ -362,7 +411,23 @@ func (s SubArithService) Invoke(ctx context.Context, method string, params json.
 		resp.Set(s.Positive())
 
 	case RPC.SubArithService.ReturnPointFromSamePackage:
-		resp.Set(s.ReturnPointFromSamePackage())
+		var args = struct {
+			P Point `json:"p"`
+		}{}
+
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"p"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
+			}
+		}
+
+		resp.Set(s.ReturnPointFromSamePackage(args.P))
 
 	case RPC.SubArithService.GetPoints:
 		resp.Set(s.GetPoints())
