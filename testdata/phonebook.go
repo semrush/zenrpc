@@ -162,3 +162,9 @@ func (pb *PhoneBook) Save(p Person, replace *bool) (id uint64, err *zenrpc.Error
 
 	return pb.id, nil
 }
+
+// Prints message
+//zenrpc:str(type)=`"hello world"`
+func (pb *PhoneBook) Echo(str string) string {
+	return str
+}
