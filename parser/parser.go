@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/token"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -22,6 +23,10 @@ const (
 	goFileSuffix      = ".go"
 	zenrpcMagicPrefix = "//zenrpc:"
 )
+
+var errorCommentRegexp = regexp.MustCompile("^(-?\\d+)\\s*(.*)$")
+var returnCommentRegexp = regexp.MustCompile("return\\s*(.*)")
+var argumentCommentRegexp = regexp.MustCompile("([^=( ]+)\\s*(\\(\\s*([^ )]+)\\s*\\))?(\\s*=\\s*((`([^`]+)`)|([^ ]+)))?\\s*(.*)")
 
 // PackageInfo represents struct info for XXX_zenrpc.go file generation
 type PackageInfo struct {
@@ -523,60 +528,99 @@ func (m *Method) parseComments(doc *ast.CommentGroup, pi *PackageInfo) {
 			continue
 		}
 
-		// split by magic path and description
-		fields := strings.Fields(comment.Text)
-		couple := [...]string{
-			strings.TrimPrefix(strings.TrimSpace(fields[0]), zenrpcMagicPrefix),
-			strings.Join(fields[1:], " "),
-		}
-
-		// parse arguments
-		if args := strings.Split(couple[0], "="); len(args) == 2 {
-			// default value
-			// example: "//zenrpc:exp=2 	exponent could be empty"
-
-			name := args[0]
-			value := args[1]
+		line := strings.TrimPrefix(strings.TrimSpace(comment.Text), zenrpcMagicPrefix)
+		switch parseCommentType(line) {
+		case "argument":
+			name, alias, hasDefault, defaultValue, description := parseArgumentComment(line)
 			for i, a := range m.Args {
 				if a.Name == name {
-					m.DefaultValues[name] = DefaultValue{
-						Name:        name,
-						CapitalName: a.CapitalName,
-						Type:        strings.TrimPrefix(a.Type, "*"), // remove star
-						Comment:     comment.Text,
-						Value:       value,
+					m.Args[i].Description = description
+
+					if hasDefault {
+						m.DefaultValues[name] = DefaultValue{
+							Name:        name,
+							CapitalName: a.CapitalName,
+							Type:        strings.TrimPrefix(a.Type, "*"), // remove star
+							Comment:     comment.Text,
+							Value:       defaultValue,
+						}
+
+						m.Args[i].HasDefaultValue = true
 					}
 
-					m.Args[i].HasDefaultValue = true
-					if len(couple) == 2 {
-						m.Args[i].Description = couple[1]
+					if alias != "" {
+						m.Args[i].JsonName = alias
 					}
-
-					break
 				}
 			}
-		} else if couple[0] == "return" {
-			// description for return
-			// example: "//zenrpc:return operation result"
-
-			m.SMDReturn.Description = couple[1]
-		} else if i, err := strconv.Atoi(couple[0]); err == nil {
-			// error code
-			// example: "//zenrpc:-32603		divide by zero"
-
-			m.Errors = append(m.Errors, SMDError{i, couple[1]})
-		} else {
-			// description for argument without default value
-			// example: "//zenrpc:id person id"
-
-			for i, a := range m.Args {
-				if a.Name == couple[0] {
-					m.Args[i].Description = couple[1]
-					break
-				}
-			}
+		case "return":
+			m.SMDReturn.Description = parseReturnComment(line)
+		case "error":
+			code, description := parseErrorComment(line)
+			m.Errors = append(m.Errors, SMDError{code, description})
 		}
 	}
+}
+
+func parseCommentType(line string) string {
+	if strings.HasPrefix(line, "return") {
+		return "return"
+	}
+
+	if errorCommentRegexp.MatchString(line) {
+		return "error"
+	}
+
+	return "argument"
+}
+
+func parseReturnComment(line string) string {
+	matches := returnCommentRegexp.FindStringSubmatch(line)
+	if len(matches) < 2 {
+		return ""
+	}
+
+	return matches[1]
+}
+
+func parseErrorComment(line string) (int, string) {
+	matches := errorCommentRegexp.FindStringSubmatch(line)
+	if len(matches) < 3 {
+		// should not be here
+		return 0, ""
+	}
+
+	code, err := strconv.Atoi(matches[1])
+	if err != nil {
+		return 0, ""
+	}
+
+	return code, matches[2]
+}
+
+func parseArgumentComment(line string) (name, alias string, hasDefault bool, defaultValue, description string) {
+	matches := argumentCommentRegexp.FindStringSubmatch(line)
+
+	if len(matches) < 10 {
+		return
+	}
+
+	// name index = 1
+	name = matches[1]
+	// alias index = 3
+	alias = matches[3]
+	// has default index = 4
+	hasDefault = matches[4] != ""
+	// default index = 5
+	defaultValue = matches[5]
+	// default quoted index = 7 can override non quoted string
+	if matches[7] != "" {
+		defaultValue = matches[7]
+	}
+	// description index = 9
+	description = strings.TrimSpace(matches[9])
+
+	return
 }
 
 func parseCommentGroup(doc *ast.CommentGroup) string {

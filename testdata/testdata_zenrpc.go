@@ -15,7 +15,7 @@ import (
 var RPC = struct {
 	ArithService     struct{ Sum, Positive, DoSomething, GetPoints, DoSomethingWithPoint, Multiply, CheckError, CheckZenRPCError, Divide, Pow, Pi, SumArray string }
 	CatalogueService struct{ First, Second, Third string }
-	PhoneBook        struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }
+	PhoneBook        struct{ Get, ValidateSearch, ById, Delete, Remove, Save, Echo string }
 	PrintService     struct{ PrintRequiredDefault, PrintOptionalWithDefault, PrintRequired, PrintOptional string }
 }{
 	ArithService: struct{ Sum, Positive, DoSomething, GetPoints, DoSomethingWithPoint, Multiply, CheckError, CheckZenRPCError, Divide, Pow, Pi, SumArray string }{
@@ -37,13 +37,14 @@ var RPC = struct {
 		Second: "second",
 		Third:  "third",
 	},
-	PhoneBook: struct{ Get, ValidateSearch, ById, Delete, Remove, Save string }{
+	PhoneBook: struct{ Get, ValidateSearch, ById, Delete, Remove, Save, Echo string }{
 		Get:            "get",
 		ValidateSearch: "validatesearch",
 		ById:           "byid",
 		Delete:         "delete",
 		Remove:         "remove",
 		Save:           "save",
+		Echo:           "echo",
 	},
 	PrintService: struct{ PrintRequiredDefault, PrintOptionalWithDefault, PrintRequired, PrintOptional string }{
 		PrintRequiredDefault:     "printrequireddefault",
@@ -114,7 +115,16 @@ func (ArithService) SMD() smd.ServiceInfo {
 									Description: `coordinate`,
 									Type:        smd.Integer,
 								},
+								"ConnectedObject": {
+									Description: ``,
+									Ref:         "#/definitions/objects.AbstractObject",
+									Type:        smd.Object,
+								},
 							},
+						},
+						"objects.AbstractObject": {
+							Type:       "object",
+							Properties: map[string]smd.Property{},
 						},
 					},
 				},
@@ -136,6 +146,17 @@ func (ArithService) SMD() smd.ServiceInfo {
 								Description: `coordinate`,
 								Type:        smd.Integer,
 							},
+							"ConnectedObject": {
+								Description: ``,
+								Ref:         "#/definitions/objects.AbstractObject",
+								Type:        smd.Object,
+							},
+						},
+						Definitions: map[string]smd.Definition{
+							"objects.AbstractObject": {
+								Type:       "object",
+								Properties: map[string]smd.Property{},
+							},
 						},
 					},
 				},
@@ -151,6 +172,17 @@ func (ArithService) SMD() smd.ServiceInfo {
 						"Y": {
 							Description: `coordinate`,
 							Type:        smd.Integer,
+						},
+						"ConnectedObject": {
+							Description: ``,
+							Ref:         "#/definitions/objects.AbstractObject",
+							Type:        smd.Object,
+						},
+					},
+					Definitions: map[string]smd.Definition{
+						"objects.AbstractObject": {
+							Type:       "object",
+							Properties: map[string]smd.Property{},
 						},
 					},
 				},
@@ -211,7 +243,7 @@ func (ArithService) SMD() smd.ServiceInfo {
 					{
 						Name:        "a",
 						Optional:    false,
-						Description: `the a`,
+						Description: ``,
 						Type:        smd.Integer,
 					},
 					{
@@ -1195,6 +1227,22 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 					401: "use replace=true",
 				},
 			},
+			"Echo": {
+				Description: `Prints message`,
+				Parameters: []smd.JSONSchema{
+					{
+						Name:        "str",
+						Optional:    true,
+						Description: ``,
+						Type:        smd.String,
+					},
+				},
+				Returns: smd.JSONSchema{
+					Description: ``,
+					Optional:    false,
+					Type:        smd.String,
+				},
+			},
 		},
 	}
 }
@@ -1339,6 +1387,31 @@ func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMes
 		}
 
 		resp.Set(s.Save(args.P, args.Replace))
+
+	case RPC.PhoneBook.Echo:
+		var args = struct {
+			Str *string `json:"type"`
+		}{}
+
+		if zenrpc.IsArray(params) {
+			if params, err = zenrpc.ConvertToObject([]string{"type"}, params); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
+			}
+		}
+
+		if len(params) > 0 {
+			if err := json.Unmarshal(params, &args); err != nil {
+				return zenrpc.NewResponseError(nil, zenrpc.InvalidParams, "", err.Error())
+			}
+		}
+
+		//zenrpc:str(type)=`"hello world"`
+		if args.Str == nil {
+			var v string = "hello world"
+			args.Str = &v
+		}
+
+		resp.Set(s.Echo(*args.Str))
 
 	default:
 		resp = zenrpc.NewResponseError(nil, zenrpc.MethodNotFound, "", nil)
