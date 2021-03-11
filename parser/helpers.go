@@ -9,21 +9,19 @@ import (
 	"strings"
 )
 
+type PackageFiles struct {
+	PackagePath string
+	PackageName string
+
+	AstFiles []*ast.File
+}
+
 func filterFile(filepath string) bool {
 	if !strings.HasSuffix(filepath, goFileSuffix) ||
 		strings.HasSuffix(filepath, GenerateFileSuffix) || strings.HasSuffix(filepath, testFileSuffix) {
 		return false
 	}
 	return true
-}
-
-func GetDependencies(entryPoint string) ([]string, error) {
-	dir := path.Dir(entryPoint)
-	allGoFiles, err := getDependenciesFilenames(dir)
-	if err != nil {
-		return nil, err
-	}
-	return allGoFiles, nil
 }
 
 func getDependenciesFilenames(dir string) ([]string, error) {
@@ -41,28 +39,41 @@ func getDependenciesFilenames(dir string) ([]string, error) {
 	return funk.UniqString(goFiles), nil
 }
 
-func GetDependenciesAstFiles(filename string) ([]*ast.File, error) {
+func GetDependenciesAstFiles(filename string) ([]PackageFiles, error) {
 	pkgs, err := loadPackageWithSyntax(path.Dir(filename))
 	if err != nil {
 		return nil, err
 	}
-	astFiles := []*ast.File{}
+	pfs := []PackageFiles{}
 	done := map[string]bool{}
 	for _, pkg := range pkgs {
 		if _, ok := done[pkg.PkgPath]; ok {
 			continue
 		}
-		astFiles = append(astFiles, pkg.Syntax...)
+
+		pfs = append(pfs, PackageFiles{
+			PackagePath: pkg.PkgPath,
+			PackageName: pkg.Name,
+			AstFiles:    pkg.Syntax,
+		})
+
 		done[pkg.PkgPath] = true
+
 		for _, childPack := range pkg.Imports {
 			if _, ok := done[childPack.PkgPath]; ok {
 				continue
 			}
-			astFiles = append(astFiles, childPack.Syntax...)
+
+			pfs = append(pfs, PackageFiles{
+				PackagePath: childPack.PkgPath,
+				PackageName: childPack.Name,
+				AstFiles:    childPack.Syntax,
+			})
+
 			done[childPack.PkgPath] = true
 		}
 	}
-	return astFiles, nil
+	return pfs, nil
 }
 
 func goFilesFromPackage(pkg *packages.Package) []string {
@@ -71,15 +82,15 @@ func goFilesFromPackage(pkg *packages.Package) []string {
 	return funk.FilterString(files, filterFile)
 }
 
-func EntryPointPackageName(filename string) (string, error) {
+func EntryPointPackageName(filename string) (string, string, error) {
 	pkgs, err := loadPackage(path.Dir(filename))
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	for _, pack := range pkgs {
-		return pack.Name, nil
+		return pack.Name, pack.PkgPath, nil
 	}
-	return "", fmt.Errorf("package not found for entry point")
+	return "", "", fmt.Errorf("package not found for entry point")
 }
 
 func loadPackage(path string) ([]*packages.Package, error) {

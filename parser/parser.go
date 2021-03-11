@@ -28,6 +28,7 @@ type PackageInfo struct {
 	EntryPoint  string
 	Dir         string
 	PackageName string
+	PackagePath string
 
 	Services []*Service
 
@@ -123,7 +124,7 @@ func NewPackageInfo(filename string) (*PackageInfo, error) {
 		return nil, err
 	}
 
-	packageName, err := EntryPointPackageName(filename)
+	packageName, packagePath, err := EntryPointPackageName(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -132,6 +133,7 @@ func NewPackageInfo(filename string) (*PackageInfo, error) {
 		EntryPoint:  filename,
 		Dir:         dir,
 		PackageName: packageName,
+		PackagePath: packagePath,
 		Services:    []*Service{},
 
 		Scopes:  make(map[string][]*ast.Scope),
@@ -145,24 +147,30 @@ func NewPackageInfo(filename string) (*PackageInfo, error) {
 
 // ParseFiles parse all files associated with package from original file
 func (pi *PackageInfo) Parse(filename string) error {
-	astFiles, err := GetDependenciesAstFiles(filename)
+	pfs, err := GetDependenciesAstFiles(filename)
 	if err != nil {
 		return err
 	}
 
-	for _, astFile := range astFiles {
-		// collect scopes
-		pi.collectScopes(astFile)
-		// get structs for zenrpc
-		pi.collectServices(astFile)
-		// get imports
-		pi.collectImports(astFile)
+	for _, pkg := range pfs {
+		for _, astFile := range pkg.AstFiles {
+			if pkg.PackagePath == pi.PackagePath {
+				// get structs for zenrpc only for root package
+				pi.collectServices(astFile)
+			}
+			// collect scopes
+			pi.collectScopes(astFile)
+			// get imports
+			pi.collectImports(astFile)
+		}
 	}
 
 	// second loop: parse methods. It runs in separate loop because we need all services to be collected for this parsing
-	for _, f := range astFiles {
-		if err := pi.parseMethods(f); err != nil {
-			return err
+	for _, pkg := range pfs {
+		for _, f := range pkg.AstFiles {
+			if err := pi.parseMethods(f); err != nil {
+				return err
+			}
 		}
 	}
 
