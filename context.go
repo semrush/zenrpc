@@ -87,6 +87,9 @@ func (c *basicContext) Get(key string) interface{} {
 func (c *basicContext) Set(key string, value interface{}) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	if c.store == nil {
+		c.store = make(map[string]interface{})
+	}
 
 	c.store[key] = value
 }
@@ -95,6 +98,5 @@ func newContext(request *http.Request, response http.ResponseWriter) *basicConte
 	return &basicContext{
 		request:  request,
 		response: response,
-		store:    make(map[string]interface{}),
 	}
 }
