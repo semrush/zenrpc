@@ -41,7 +41,7 @@ type basicContext struct {
 }
 
 func (c *basicContext) Request() *http.Request {
-	panic("implement me")
+	return c.request
 }
 
 func (c *basicContext) Response() *http.Response {
