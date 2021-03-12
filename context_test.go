@@ -110,3 +110,19 @@ func TestCookie(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, cookie, got)
 }
+
+func TestSetCookie(t *testing.T) {
+	cookie := &http.Cookie{
+		Name:  "foo",
+		Value: "bar",
+	}
+	r := &http.Request{
+		Header: make(map[string][]string),
+	}
+
+	c := newContext(r, nil)
+	c.SetCookie(cookie)
+	got, err := c.request.Cookie("foo")
+	require.NoError(t, err)
+	assert.Equal(t, cookie, got)
+}
