@@ -20,3 +20,11 @@ func TestRequest(t *testing.T) {
 	c := newContext(r, nil)
 	assert.Equal(t, r, c.Request())
 }
+
+func TestResponse(t *testing.T) {
+	r := &http.Response{
+		StatusCode: http.StatusOK,
+	}
+	c := newContext(nil, r)
+	assert.Equal(t, r, c.Response())
+}
