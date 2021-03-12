@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStorage(t *testing.T) {
@@ -29,7 +30,7 @@ func TestResponse(t *testing.T) {
 	assert.Equal(t, r, c.Response())
 }
 
-func Test_basicContext_RealIP(t *testing.T) {
+func TestRealIP(t *testing.T) {
 	type fields struct {
 		request *http.Request
 	}
@@ -92,4 +93,20 @@ func Test_basicContext_RealIP(t *testing.T) {
 			assert.Equal(t, tt.want, c.RealIP())
 		})
 	}
+}
+
+func TestCookie(t *testing.T) {
+	cookie := &http.Cookie{
+		Name:  "foo",
+		Value: "bar",
+	}
+	r := &http.Request{
+		Header: make(map[string][]string),
+	}
+	r.AddCookie(cookie)
+
+	c := newContext(r, nil)
+	got, err := c.Cookie("foo")
+	require.NoError(t, err)
+	assert.Equal(t, cookie, got)
 }
