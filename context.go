@@ -66,7 +66,7 @@ func (c *basicContext) RealIP() string {
 }
 
 func (c *basicContext) Cookie(name string) (*http.Cookie, error) {
-	panic("implement me")
+	return c.request.Cookie(name)
 }
 
 func (c *basicContext) SetCookie(cookie *http.Cookie) {
