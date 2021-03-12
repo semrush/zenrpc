@@ -121,3 +121,23 @@ func TestSetCookie(t *testing.T) {
 	c.SetCookie(cookie)
 	require.Len(t, c.response.Header().Values("Set-Cookie"), 1)
 }
+
+func TestCookies(t *testing.T) {
+	cookie := &http.Cookie{
+		Name:  "foo",
+		Value: "bar",
+	}
+	cookie2 := &http.Cookie{
+		Name:  "foo2",
+		Value: "bar2",
+	}
+
+	r := &http.Request{
+		Header: make(map[string][]string),
+	}
+	r.AddCookie(cookie)
+	r.AddCookie(cookie2)
+
+	c := newContext(r, nil)
+	require.Len(t, c.Cookies(), 2)
+}
