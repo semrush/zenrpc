@@ -1,7 +1,9 @@
 package zenrpc
 
 import (
+	"net"
 	"net/http"
+	"strings"
 	"sync"
 )
 
@@ -49,7 +51,18 @@ func (c *basicContext) Response() *http.Response {
 }
 
 func (c *basicContext) RealIP() string {
-	panic("implement me")
+	if ip := c.request.Header.Get("X-Forwarded-For"); ip != "" {
+		i := strings.IndexAny(ip, ", ")
+		if i > 0 {
+			return ip[:i]
+		}
+		return ip
+	}
+	if ip := c.request.Header.Get("X-Real-IP"); ip != "" {
+		return ip
+	}
+	ra, _, _ := net.SplitHostPort(c.request.RemoteAddr)
+	return ra
 }
 
 func (c *basicContext) Cookie(name string) (*http.Cookie, error) {

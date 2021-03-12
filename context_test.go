@@ -44,7 +44,7 @@ func Test_basicContext_RealIP(t *testing.T) {
 				request: &http.Request{
 					Header: map[string][]string{
 						"X-Forwarded-For": {"203.0.113.195, 70.41.3.18, 150.172.238.178"},
-						"X-Real-IP":       {"8.8.8.8"},
+						"X-Real-Ip":       {"8.8.8.8"},
 					},
 					RemoteAddr: "9.9.9.9:41234",
 				},
@@ -57,7 +57,7 @@ func Test_basicContext_RealIP(t *testing.T) {
 				request: &http.Request{
 					Header: map[string][]string{
 						"X-Forwarded-For": {"203.0.113.195"},
-						"X-Real-IP":       {"8.8.8.8"},
+						"X-Real-Ip":       {"8.8.8.8"},
 					},
 					RemoteAddr: "9.9.9.9:41234",
 				},
@@ -69,7 +69,7 @@ func Test_basicContext_RealIP(t *testing.T) {
 			fields: fields{
 				request: &http.Request{
 					Header: map[string][]string{
-						"X-Real-IP": {"8.8.8.8"},
+						"X-Real-Ip": {"8.8.8.8"},
 					},
 					RemoteAddr: "9.9.9.9:41234",
 				},
