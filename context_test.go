@@ -28,3 +28,68 @@ func TestResponse(t *testing.T) {
 	c := newContext(nil, r)
 	assert.Equal(t, r, c.Response())
 }
+
+func Test_basicContext_RealIP(t *testing.T) {
+	type fields struct {
+		request *http.Request
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			name: "X-Forwarded-For multiple",
+			fields: fields{
+				request: &http.Request{
+					Header: map[string][]string{
+						"X-Forwarded-For": {"203.0.113.195, 70.41.3.18, 150.172.238.178"},
+						"X-Real-IP":       {"8.8.8.8"},
+					},
+					RemoteAddr: "9.9.9.9:41234",
+				},
+			},
+			want: "203.0.113.195",
+		},
+		{
+			name: "X-Forwarded-For one",
+			fields: fields{
+				request: &http.Request{
+					Header: map[string][]string{
+						"X-Forwarded-For": {"203.0.113.195"},
+						"X-Real-IP":       {"8.8.8.8"},
+					},
+					RemoteAddr: "9.9.9.9:41234",
+				},
+			},
+			want: "203.0.113.195",
+		},
+		{
+			name: "X-Real-IP one",
+			fields: fields{
+				request: &http.Request{
+					Header: map[string][]string{
+						"X-Real-IP": {"8.8.8.8"},
+					},
+					RemoteAddr: "9.9.9.9:41234",
+				},
+			},
+			want: "8.8.8.8",
+		},
+		{
+			name: "No headers",
+			fields: fields{
+				request: &http.Request{
+					RemoteAddr: "9.9.9.9:41234",
+				},
+			},
+			want: "9.9.9.9",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := newContext(tt.fields.request, nil)
+			assert.Equal(t, tt.want, c.RealIP())
+		})
+	}
+}
