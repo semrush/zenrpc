@@ -45,7 +45,7 @@ func (c *basicContext) Request() *http.Request {
 }
 
 func (c *basicContext) Response() *http.Response {
-	panic("implement me")
+	return c.response
 }
 
 func (c *basicContext) RealIP() string {
