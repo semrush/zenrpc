@@ -2,6 +2,7 @@ package zenrpc
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,9 +24,7 @@ func TestRequest(t *testing.T) {
 }
 
 func TestResponse(t *testing.T) {
-	r := &http.Response{
-		StatusCode: http.StatusOK,
-	}
+	r := &httptest.ResponseRecorder{}
 	c := newContext(nil, r)
 	assert.Equal(t, r, c.Response())
 }
@@ -116,11 +115,9 @@ func TestSetCookie(t *testing.T) {
 		Name:  "foo",
 		Value: "bar",
 	}
-	r := &http.Request{
-		Header: make(map[string][]string),
-	}
+	resp := httptest.NewRecorder()
 
-	c := newContext(r, nil)
+	c := newContext(nil, resp)
 	c.SetCookie(cookie)
-	require.Len(t, c.response.Cookies(), 1)
+	require.Len(t, c.response.Header().Values("Set-Cookie"), 1)
 }

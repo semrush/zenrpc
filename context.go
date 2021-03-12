@@ -37,7 +37,7 @@ type Context interface {
 
 type basicContext struct {
 	request  *http.Request
-	response *http.Response
+	response http.ResponseWriter
 	lock     sync.RWMutex
 	store    map[string]interface{}
 }
@@ -46,7 +46,7 @@ func (c *basicContext) Request() *http.Request {
 	return c.request
 }
 
-func (c *basicContext) Response() *http.Response {
+func (c *basicContext) Response() http.ResponseWriter {
 	return c.response
 }
 
@@ -70,7 +70,7 @@ func (c *basicContext) Cookie(name string) (*http.Cookie, error) {
 }
 
 func (c *basicContext) SetCookie(cookie *http.Cookie) {
-	panic("implement me")
+	http.SetCookie(c.response, cookie)
 }
 
 func (c *basicContext) Cookies() []*http.Cookie {
@@ -91,7 +91,7 @@ func (c *basicContext) Set(key string, value interface{}) {
 	c.store[key] = value
 }
 
-func newContext(request *http.Request, response *http.Response) *basicContext {
+func newContext(request *http.Request, response http.ResponseWriter) *basicContext {
 	return &basicContext{
 		request:  request,
 		response: response,
