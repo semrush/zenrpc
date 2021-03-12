@@ -7,6 +7,7 @@ require (
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/common v0.10.0
 	github.com/smartystreets/goconvey v1.6.4
+	github.com/stretchr/testify v1.4.0
 	github.com/thoas/go-funk v0.6.0
 	golang.org/x/tools v0.0.0-20200729173947-1c30660f9f89
 )
