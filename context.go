@@ -74,7 +74,7 @@ func (c *basicContext) SetCookie(cookie *http.Cookie) {
 }
 
 func (c *basicContext) Cookies() []*http.Cookie {
-	panic("implement me")
+	return c.request.Cookies()
 }
 
 func (c *basicContext) Get(key string) interface{} {
