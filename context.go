@@ -30,7 +30,7 @@ type Context interface {
 	Get(key string) interface{}
 
 	// Set saves data in the context.
-	Set(key string, val interface{})
+	Set(key string, value interface{})
 }
 
 type basicContext struct {
@@ -65,16 +65,23 @@ func (c *basicContext) Cookies() []*http.Cookie {
 }
 
 func (c *basicContext) Get(key string) interface{} {
-	panic("implement me")
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	return c.store[key]
 }
 
-func (c *basicContext) Set(key string, val interface{}) {
-	panic("implement me")
+func (c *basicContext) Set(key string, value interface{}) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.store[key] = value
 }
 
 func newContext(request *http.Request, response *http.Response) *basicContext {
 	return &basicContext{
 		request:  request,
 		response: response,
+		store:    make(map[string]interface{}),
 	}
 }
