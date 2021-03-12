@@ -122,7 +122,5 @@ func TestSetCookie(t *testing.T) {
 
 	c := newContext(r, nil)
 	c.SetCookie(cookie)
-	got, err := c.request.Cookie("foo")
-	require.NoError(t, err)
-	assert.Equal(t, cookie, got)
+	require.Len(t, c.response.Cookies(), 1)
 }
