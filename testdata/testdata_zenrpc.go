@@ -296,7 +296,7 @@ func (ArithService) SMD() smd.ServiceInfo {
 }
 
 // Invoke is as generated code from zenrpc cmd
-func (s ArithService) Invoke(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
+func (s ArithService) Invoke(c zenrpc.Context, method string, params json.RawMessage) zenrpc.Response {
 	resp := zenrpc.Response{}
 	var err error
 
@@ -319,7 +319,7 @@ func (s ArithService) Invoke(ctx context.Context, method string, params json.Raw
 			}
 		}
 
-		resp.Set(s.Sum(ctx, args.A, args.B))
+		resp.Set(s.Sum(c, args.A, args.B))
 
 	case RPC.ArithService.Positive:
 		resp.Set(s.Positive())

@@ -1,19 +1,19 @@
 package testdata
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
-	"github.com/semrush/zenrpc/v2"
 	"sync"
+
+	"github.com/semrush/zenrpc/v2"
 )
 
-// SerialPeopleAccess is middleware for seiral access to PhoneBook methods
+// SerialPeopleAccess is middleware for serial access to PhoneBook methods
 func SerialPeopleAccess(pbNamespace string) zenrpc.MiddlewareFunc {
 	var lock sync.RWMutex
 	return func(h zenrpc.InvokeFunc) zenrpc.InvokeFunc {
-		return func(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
-			if zenrpc.NamespaceFromContext(ctx) == pbNamespace {
+		return func(c zenrpc.Context, method string, params json.RawMessage) zenrpc.Response {
+			if c.Namespace() == pbNamespace {
 				switch method {
 				case RPC.PhoneBook.Get, RPC.PhoneBook.ById:
 					lock.RLock()
@@ -24,7 +24,7 @@ func SerialPeopleAccess(pbNamespace string) zenrpc.MiddlewareFunc {
 				}
 			}
 
-			return h(ctx, method, params)
+			return h(c, method, params)
 		}
 	}
 }

@@ -2,7 +2,6 @@ package zenrpc_test
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io/ioutil"
 	"log"
@@ -13,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/websocket"
+
 	"github.com/semrush/zenrpc/v2"
 	"github.com/semrush/zenrpc/v2/testdata"
 )
@@ -313,8 +313,8 @@ func TestServer_ServeHTTPWithErrors(t *testing.T) {
 
 func TestServer_Extensions(t *testing.T) {
 	middleware := func(h zenrpc.InvokeFunc) zenrpc.InvokeFunc {
-		return func(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
-			r := h(ctx, method, params)
+		return func(c zenrpc.Context, method string, params json.RawMessage) zenrpc.Response {
+			r := h(c, method, params)
 
 			// ignore multiply method
 			if method != testdata.RPC.ArithService.Multiply {

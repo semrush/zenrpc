@@ -61,7 +61,7 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.printf("read request body failed with err=%v", err)
 		data = NewResponseError(nil, ParseError, "", nil)
 	} else {
-		data = s.process(newRequestContext(r.Context(), r), b)
+		data = s.process(newContext(r, w), b)
 	}
 
 	// if responses is empty -> all requests are notifications -> exit immediately
@@ -87,15 +87,15 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // ServeWS processes JSON-RPC 2.0 requests via Gorilla WebSocket.
 // https://github.com/gorilla/websocket/blob/master/examples/echo/
 func (s Server) ServeWS(w http.ResponseWriter, r *http.Request) {
-	c, err := s.options.Upgrader.Upgrade(w, r, nil)
+	conn, err := s.options.Upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		s.printf("upgrade connection failed with err=%v", err)
 		return
 	}
-	defer c.Close()
+	defer conn.Close()
 
 	for {
-		mt, message, err := c.ReadMessage()
+		mt, message, err := conn.ReadMessage()
 
 		// normal closure
 		if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
@@ -107,16 +107,18 @@ func (s Server) ServeWS(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		data, err := s.Do(newRequestContext(r.Context(), r), message)
+		c := newContext(r, w)
+
+		data, err := s.Do(c, message)
 		if err != nil {
 			s.printf("marshal json response failed with err=%v", err)
-			c.WriteControl(websocket.CloseInternalServerErr, nil, time.Time{})
+			conn.WriteControl(websocket.CloseInternalServerErr, nil, time.Time{})
 			break
 		}
 
-		if err = c.WriteMessage(mt, data); err != nil {
+		if err = conn.WriteMessage(mt, data); err != nil {
 			s.printf("write response failed with err=%v", err)
-			c.WriteControl(websocket.CloseInternalServerErr, nil, time.Time{})
+			conn.WriteControl(websocket.CloseInternalServerErr, nil, time.Time{})
 			break
 		}
 	}

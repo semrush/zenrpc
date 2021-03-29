@@ -141,3 +141,16 @@ func TestCookies(t *testing.T) {
 	c := newContext(r, nil)
 	require.Len(t, c.Cookies(), 2)
 }
+
+func TestID(t *testing.T) {
+	c := newContext(nil, nil)
+	assert.Zero(t, c.ID())
+	c.SetID(ID{
+		Int:   10,
+		State: IDStateInt,
+	})
+	assert.Equal(t, ID{
+		Int:   10,
+		State: IDStateInt,
+	}, c.ID())
+}

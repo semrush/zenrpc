@@ -40,11 +40,11 @@ const (
 type MiddlewareFunc func(InvokeFunc) InvokeFunc
 
 // InvokeFunc is a function for processing single JSON-RPC 2.0 Request after validation and parsing.
-type InvokeFunc func(context.Context, string, json.RawMessage) Response
+type InvokeFunc func(c Context, method string, params json.RawMessage) Response
 
 // Invoker implements service handler.
 type Invoker interface {
-	Invoke(ctx context.Context, method string, params json.RawMessage) Response
+	Invoke(c Context, method string, params json.RawMessage) Response
 	SMD() smd.ServiceInfo
 }
 
@@ -129,7 +129,7 @@ func (s *Server) SetLogger(printer Printer) {
 }
 
 // process process JSON-RPC 2.0 message, invokes correct method for namespace and returns JSON-RPC 2.0 Response.
-func (s *Server) process(ctx context.Context, message json.RawMessage) interface{} {
+func (s *Server) process(c Context, message json.RawMessage) interface{} {
 	var requests []Request
 	// parsing batch requests
 	batch := IsArray(message)
@@ -153,11 +153,11 @@ func (s *Server) process(ctx context.Context, message json.RawMessage) interface
 
 	// process single request: if request single and not notification  - just run it and return result
 	if !batch && requests[0].ID != nil {
-		return s.processRequest(ctx, requests[0])
+		return s.processRequest(c, requests[0])
 	}
 
 	// process batch requests
-	if res := s.processBatch(ctx, requests); len(res) > 0 {
+	if res := s.processBatch(c, requests); len(res) > 0 {
 		return res
 	}
 
@@ -165,7 +165,7 @@ func (s *Server) process(ctx context.Context, message json.RawMessage) interface
 }
 
 // processBatch process batch requests with context.
-func (s Server) processBatch(ctx context.Context, requests []Request) []Response {
+func (s Server) processBatch(c Context, requests []Request) []Response {
 	reqLen := len(requests)
 
 	// running requests in batch asynchronously
@@ -180,9 +180,9 @@ func (s Server) processBatch(ctx context.Context, requests []Request) []Response
 			if req.ID == nil {
 				// ignoring response if request is notification
 				wg.Done()
-				s.processRequest(ctx, req)
+				s.processRequest(c, req)
 			} else {
-				respChan <- s.processRequest(ctx, req)
+				respChan <- s.processRequest(c, req)
 				wg.Done()
 			}
 		}(req)
@@ -206,7 +206,7 @@ func (s Server) processBatch(ctx context.Context, requests []Request) []Response
 }
 
 // processRequest processes a single request in service invoker.
-func (s Server) processRequest(ctx context.Context, req Request) Response {
+func (s Server) processRequest(c Context, req Request) Response {
 	// checks for json-rpc version and method
 	if req.Version != Version || req.Method == "" {
 		return NewResponseError(req.ID, InvalidRequest, "", nil)
@@ -225,10 +225,14 @@ func (s Server) processRequest(ctx context.Context, req Request) Response {
 	}
 
 	// set namespace to context
-	ctx = newNamespaceContext(ctx, namespace)
+	c.SetNamespace(namespace)
 
 	// set id to context
-	ctx = newIDContext(ctx, req.ID)
+	id, err := newID(req.ID)
+	if err != nil {
+		return NewResponseError(req.ID, InvalidParams, "invalid id", nil)
+	}
+	c.SetID(id)
 
 	// set middleware to func
 	f := InvokeFunc(s.services[namespace].Invoke)
@@ -237,7 +241,7 @@ func (s Server) processRequest(ctx context.Context, req Request) Response {
 	}
 
 	// invoke func with middleware
-	resp := f(ctx, method, req.Params)
+	resp := f(c, method, req.Params)
 	resp.ID = req.ID
 
 	if s.options.HideErrorDataField && resp.Error != nil {
@@ -248,8 +252,8 @@ func (s Server) processRequest(ctx context.Context, req Request) Response {
 }
 
 // Do process JSON-RPC 2.0 request, invokes correct method for namespace and returns JSON-RPC 2.0 Response or marshaller error.
-func (s Server) Do(ctx context.Context, req []byte) ([]byte, error) {
-	return json.Marshal(s.process(ctx, req))
+func (s Server) Do(c Context, req []byte) ([]byte, error) {
+	return json.Marshal(s.process(c, req))
 }
 
 func (s Server) printf(format string, v ...interface{}) {

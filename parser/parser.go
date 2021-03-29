@@ -16,7 +16,7 @@ const (
 
 	zenrpcComment     = "//zenrpc"
 	zenrpcService     = "zenrpc.Service"
-	contextTypeName   = "context.Context"
+	contextTypeName   = "zenrpc.Context"
 	errorTypeName     = "zenrpc.Error"
 	testFileSuffix    = "_test.go"
 	goFileSuffix      = ".go"
