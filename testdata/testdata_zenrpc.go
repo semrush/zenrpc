@@ -3,7 +3,6 @@
 package testdata
 
 import (
-	"context"
 	"encoding/json"
 
 	"github.com/semrush/zenrpc/v2"
@@ -114,7 +113,16 @@ func (ArithService) SMD() smd.ServiceInfo {
 									Description: `coordinate`,
 									Type:        smd.Integer,
 								},
+								"ConnectedObject": {
+									Description: ``,
+									Ref:         "#/definitions/objects.AbstractObject",
+									Type:        smd.Object,
+								},
 							},
+						},
+						"objects.AbstractObject": {
+							Type:       "object",
+							Properties: map[string]smd.Property{},
 						},
 					},
 				},
@@ -136,6 +144,17 @@ func (ArithService) SMD() smd.ServiceInfo {
 								Description: `coordinate`,
 								Type:        smd.Integer,
 							},
+							"ConnectedObject": {
+								Description: ``,
+								Ref:         "#/definitions/objects.AbstractObject",
+								Type:        smd.Object,
+							},
+						},
+						Definitions: map[string]smd.Definition{
+							"objects.AbstractObject": {
+								Type:       "object",
+								Properties: map[string]smd.Property{},
+							},
 						},
 					},
 				},
@@ -151,6 +170,17 @@ func (ArithService) SMD() smd.ServiceInfo {
 						"Y": {
 							Description: `coordinate`,
 							Type:        smd.Integer,
+						},
+						"ConnectedObject": {
+							Description: ``,
+							Ref:         "#/definitions/objects.AbstractObject",
+							Type:        smd.Object,
+						},
+					},
+					Definitions: map[string]smd.Definition{
+						"objects.AbstractObject": {
+							Type:       "object",
+							Properties: map[string]smd.Property{},
 						},
 					},
 				},
@@ -729,7 +759,7 @@ func (CatalogueService) SMD() smd.ServiceInfo {
 }
 
 // Invoke is as generated code from zenrpc cmd
-func (s CatalogueService) Invoke(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
+func (s CatalogueService) Invoke(c zenrpc.Context, method string, params json.RawMessage) zenrpc.Response {
 	resp := zenrpc.Response{}
 	var err error
 
@@ -1200,7 +1230,7 @@ func (PhoneBook) SMD() smd.ServiceInfo {
 }
 
 // Invoke is as generated code from zenrpc cmd
-func (s PhoneBook) Invoke(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
+func (s PhoneBook) Invoke(c zenrpc.Context, method string, params json.RawMessage) zenrpc.Response {
 	resp := zenrpc.Response{}
 	var err error
 
@@ -1420,7 +1450,7 @@ func (PrintService) SMD() smd.ServiceInfo {
 }
 
 // Invoke is as generated code from zenrpc cmd
-func (s PrintService) Invoke(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
+func (s PrintService) Invoke(c zenrpc.Context, method string, params json.RawMessage) zenrpc.Response {
 	resp := zenrpc.Response{}
 	var err error
 
