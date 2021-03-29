@@ -128,7 +128,7 @@ var RPC = struct {
 	}
 
 	// Invoke is as generated code from zenrpc cmd
-	func (s {{.Name}}) Invoke(ctx context.Context, method string, params json.RawMessage) zenrpc.Response {
+	func (s {{.Name}}) Invoke(c zenrpc.Context, method string, params json.RawMessage) zenrpc.Response {
 		resp := zenrpc.Response{}
 		{{ if .HasErrorVariable }}var err error{{ end }}
 
@@ -164,9 +164,9 @@ var RPC = struct {
 					{{ end }}
 
 				{{ end }} {{if .Returns}}
-					resp.Set(s.{{.Name}}({{if .HasContext}}ctx, {{end}} {{ range .Args }}{{if and (not .HasStar) .HasDefaultValue}}*{{end}}args.{{.CapitalName}}, {{ end }}))
+					resp.Set(s.{{.Name}}({{if .HasContext}}c, {{end}} {{ range .Args }}{{if and (not .HasStar) .HasDefaultValue}}*{{end}}args.{{.CapitalName}}, {{ end }}))
 				{{else}}
-					s.{{.Name}}({{if .HasContext}}ctx, {{end}} {{ range .Args }}{{if and (not .HasStar) .HasDefaultValue}}*{{end}}args.{{.CapitalName}}, {{ end }})
+					s.{{.Name}}({{if .HasContext}}c, {{end}} {{ range .Args }}{{if and (not .HasStar) .HasDefaultValue}}*{{end}}args.{{.CapitalName}}, {{ end }})
 				{{end}}
 		{{- end }}
 		default:

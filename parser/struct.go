@@ -6,10 +6,14 @@ import (
 	"strings"
 )
 
-func (pi *PackageInfo) parseStructs() {
+func (pi *PackageInfo) parseStructs() error {
 	for _, s := range pi.Structs {
-		s.parse(pi)
+		if err := s.parse(pi); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 func (s *Struct) findTypeSpec(pi *PackageInfo) bool {
